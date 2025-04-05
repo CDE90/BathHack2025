@@ -12,7 +12,8 @@ const geminiClient = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
 
-const factualityPromptText = "";
+const factualityPrompt =
+    "please search for similar articles, and rate the following article on factuality with a float between zero and one";
 
 export async function GET() {
     return NextResponse.json({ message: "Hello from the API!" });
@@ -42,7 +43,10 @@ export async function POST(request: Request) {
 
         const resp = await geminiClient.models.generateContent({
             model: "gemini-2.0-flash-001",
-            contents: articleBody,
+            contents: factualityPrompt + articleBody,
+            config: {
+                tools: [{ googleSearch: {} }],
+            },
         });
 
         console.log(resp.text);
