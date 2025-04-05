@@ -3,6 +3,7 @@ import { OpenAI } from "openai";
 import { GoogleGenAI } from "@google/genai";
 import type { AnalysisResults } from "@/lib/types/AnalysisResults";
 import type { AnalysisRequest } from "@/lib/types/AnalysisRequest";
+import { htmlToMarkdown } from "./prompting";
 
 const client = new OpenAI({
     apiKey: process.env.OPENAIKEY,
@@ -30,14 +31,21 @@ export async function POST(request: Request) {
 
         let articleBody: string;
 
-        if (body.isUrl) {
-            const data = await fetch(body.value);
-            // articleBody = (await data.body?.getReader().read())?.value as string;
-            articleBody = await data.text();
-            console.log(articleBody);
+        if (body.isHtml) {
+            const markdownContent = await htmlToMarkdown(
+                geminiClient,
+                body.content,
+            );
+
+            if (!markdownContent) {
+                return NextResponse.json({
+                    error: "Failed to convert HTML to Markdown",
+                });
+            }
+            articleBody = markdownContent;
         } else {
+            articleBody = body.content;
         }
-        articleBody = body.value;
 
         //        const resp = await client.responses.create({
         //            model: "gpt-4o",
@@ -55,12 +63,35 @@ export async function POST(request: Request) {
 
         console.log(resp.text);
 
-        return NextResponse.json({
-            message: "Data received!",
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            data: resp.text,
-        });
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const response: AnalysisResults = {
+            factuality: {
+                rating: "Mostly Factual",
+                confidence: 0.85,
+            },
+            source: {
+                name: "Example News",
+                url: "example.com",
+                reliability: "Reliable",
+            },
+            politicalLeaning: {
+                rating: "Center-Left",
+                score: 0.35, // 0-100 scale where 0 is far left, 50 is center, 100 is far right
+            },
+            sentiment: {
+                overall: {
+                    rating: "Neutral",
+                    score: 0.2, // -1 to 1 scale
+                },
+                entities: [
+                    { name: "President Smith", score: 0.7 },
+                    { name: "New Policy", score: -0.5 },
+                    { name: "Economic Reform", score: 0.3 },
+                    { name: "Opposition Party", score: -0.6 },
+                ],
+            },
+        };
+
+        return NextResponse.json(response);
     } catch (error) {
         return NextResponse.json(
             { error: `Failed to parse request body ${error as string}` },
