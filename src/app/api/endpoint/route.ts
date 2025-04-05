@@ -12,8 +12,12 @@ const geminiClient = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
 
-const factualityPrompt =
-    "please search for similar articles, and rate the following article on factuality with a float between zero and one";
+const factualityPrompt = `please search for similar articles,
+and rate it between 0 and 1 on factuality. The response should be only json, in the format: 
+{
+    "rating":a number between 0 and 1,
+    "sources":an array of the links to sources
+}`;
 
 export async function GET() {
     return NextResponse.json({ message: "Hello from the API!" });
