@@ -211,6 +211,69 @@ export default function NewsAnalyzer() {
                     </CardFooter>
                 </Card>
 
+                {/* Guidance Card - Only visible on large screens when no results */}
+                {!results && !isLoading && (
+                    <Card className="flex-col lg:col-span-2 lg:flex">
+                        <CardHeader className="bg-muted/30">
+                            <CardTitle>The Credibility Compass</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-1 flex-col justify-center p-8">
+                            <div className="space-y-6 text-center">
+                                <div className="bg-muted mx-auto flex h-20 w-20 items-center justify-center rounded-full">
+                                    <Scale className="text-primary h-10 w-10" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-semibold">
+                                        Analyze Any News Article
+                                    </h3>
+                                    <p className="text-muted-foreground">
+                                        Enter a URL in the form to the left to
+                                        get started. We&apos;ll analyze the
+                                        article for:
+                                    </p>
+                                    <ul className="text-muted-foreground mx-auto mt-4 max-w-xs space-y-2 text-left">
+                                        <li className="flex items-start">
+                                            <Check className="mt-0.5 mr-2 h-5 w-5 text-green-500" />
+                                            <span>
+                                                Factual accuracy and supporting
+                                                evidence
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <Info className="mt-0.5 mr-2 h-5 w-5 text-blue-500" />
+                                            <span>
+                                                Source reliability and
+                                                credibility
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <Scale className="mt-0.5 mr-2 h-5 w-5 text-purple-500" />
+                                            <span>
+                                                Political bias and orientation
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <AlertCircle className="mt-0.5 mr-2 h-5 w-5 text-yellow-500" />
+                                            <span>
+                                                Sentiment analysis of key
+                                                entities
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="bg-muted/10 justify-center p-6">
+                            <p className="text-muted-foreground text-center text-sm">
+                                Paste any news article URL to get a
+                                comprehensive analysis of its credibility and
+                                learn how to navigate today&apos;s complex media
+                                landscape.
+                            </p>
+                        </CardFooter>
+                    </Card>
+                )}
+
                 {/* Results Section */}
                 {isLoading ? (
                     <Card className="lg:col-span-2">
