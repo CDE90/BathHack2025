@@ -149,14 +149,40 @@ export async function POST(request: Request) {
                 }
             }
 
-            // Get source analysis from AI using Perplexity (geminiClient is passed for compatibility)
-            const sourceDataRaw = await getSourceData(
-                geminiClient,
-                articleContent,
-                sourceDomain,
-                sourceName,
-            );
+            // Run all AI analyses in parallel for better performance
+            const [sourceDataRaw, sentimentDataRaw, factualityDataRaw, politicalDataRaw] = 
+                await Promise.all([
+                    // Get source analysis from AI using Perplexity
+                    getSourceData(
+                        geminiClient,
+                        articleContent,
+                        sourceDomain,
+                        sourceName,
+                    ),
+                    // Get sentiment analysis data
+                    getSentimentData(
+                        geminiClient,
+                        articleContent,
+                        sourceDomain,
+                        sourceName,
+                    ),
+                    // Get factuality analysis data using Perplexity
+                    getFactualityData(
+                        geminiClient,
+                        articleContent,
+                        sourceDomain,
+                        sourceName,
+                    ),
+                    // Get political leaning analysis from AI
+                    getPoliticalLeaningData(
+                        geminiClient,
+                        articleContent,
+                        sourceDomain,
+                        sourceName,
+                    )
+                ]);
 
+            // Process source data
             if (!sourceDataRaw) {
                 return NextResponse.json(
                     { error: "Failed to analyze source" },
@@ -174,14 +200,7 @@ export async function POST(request: Request) {
             };
             const sourceData = JSON.parse(sourceDataRaw) as SourceData;
 
-            // Get sentiment analysis data
-            const sentimentDataRaw = await getSentimentData(
-                geminiClient,
-                articleContent,
-                sourceData.url,
-                sourceData.name,
-            );
-
+            // Process sentiment data
             if (!sentimentDataRaw) {
                 return NextResponse.json(
                     { error: "Failed to analyze sentiment" },
@@ -198,14 +217,7 @@ export async function POST(request: Request) {
             };
             const sentimentData = JSON.parse(sentimentDataRaw) as SentimentData;
 
-            // Get factuality analysis data using Perplexity (geminiClient is passed for compatibility)
-            const factualityDataRaw = await getFactualityData(
-                geminiClient,
-                articleContent,
-                sourceData.url,
-                sourceData.name,
-            );
-
+            // Process factuality data
             if (!factualityDataRaw) {
                 return NextResponse.json(
                     { error: "Failed to analyze factuality" },
@@ -224,6 +236,7 @@ export async function POST(request: Request) {
                     ratingLabel: string;
                 };
             };
+            
             // Parse factuality data, ensuring we have a valid response
             let factualityData: FactualityData;
             try {
@@ -248,7 +261,7 @@ export async function POST(request: Request) {
                 };
             }
 
-            // Get political leaning analysis from AI
+            // Process political leaning data
             let articlePoliticalScore = 50; // Default to center
             let articlePoliticalCategory = "Centrist";
             let articlePoliticalReasoning = "";
@@ -257,14 +270,6 @@ export async function POST(request: Request) {
             let sourcePoliticalReasoning = "";
 
             try {
-                // Use the geminiClient parameter for compatibility, but the function will use perplexityClient internally
-                const politicalDataRaw = await getPoliticalLeaningData(
-                    geminiClient,
-                    articleContent,
-                    sourceData.url,
-                    sourceData.name,
-                );
-
                 if (politicalDataRaw) {
                     type PoliticalData = {
                         article: {
