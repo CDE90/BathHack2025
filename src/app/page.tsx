@@ -2,7 +2,23 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { ArticleRenderer } from "@/app/article-renderer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { AnalysisResults } from "@/lib/types/AnalysisResults";
 import {
     AlertCircle,
     Check,
@@ -11,24 +27,7 @@ import {
     Loader2,
     Scale,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    CardFooter,
-} from "@/components/ui/card";
-import { ModeToggle } from "@/components/ui/mode-toggle";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
-import type { AnalysisResults } from "@/lib/types/AnalysisResults";
-import { ArticleRenderer } from "@/app/article-renderer";
+import { useState } from "react";
 
 interface ExtendedAnalysisResults extends AnalysisResults {
     article?: {
@@ -39,10 +38,12 @@ interface ExtendedAnalysisResults extends AnalysisResults {
 }
 
 export default function NewsAnalyzer() {
-    const [inputType, setInputType] = useState<"url" | "text">("url");
+    // Always use URL input type
+    const inputType = "url";
     const [inputValue, setInputValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isValidUrl, setIsValidUrl] = useState(true);
     const [results, setResults] = useState<ExtendedAnalysisResults | null>(
         null,
     );
@@ -50,37 +51,45 @@ export default function NewsAnalyzer() {
         "analysis",
     );
 
+    // URL validation function
+    const validateUrl = (url: string) => {
+        if (!url.trim()) return true; // Empty is OK, we'll check before submit
+        try {
+            new URL(url);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
         if (!inputValue.trim()) {
-            setError("Please enter a URL or text to analyze");
+            setError("Please enter a URL to evaluate");
+            return;
+        }
+
+        if (!validateUrl(inputValue)) {
+            setError(
+                "Please enter a valid URL that starts with http:// or https://",
+            );
+            setIsValidUrl(false);
             return;
         }
 
         setIsLoading(true);
 
-        // Make the API call directly, sending either the URL or text content
+        // Make the API call with the URL
         try {
-            let analysisRequest;
-
-            if (inputType === "url") {
-                // For URLs, send the URL directly
-                analysisRequest = {
-                    content: inputValue, // Send the URL itself
-                    isHtml: true,
-                    isUrl: true,
-                    url: inputValue,
-                };
-                console.log("Sending URL for analysis:", inputValue);
-            } else {
-                // For plain text
-                analysisRequest = {
-                    content: inputValue,
-                    isHtml: false,
-                };
-            }
+            const analysisRequest = {
+                content: inputValue, // Send the URL itself
+                isHtml: true,
+                isUrl: true,
+                url: inputValue,
+            };
+            console.log("Sending URL for evaluation:", inputValue);
 
             // Make the API call
             const response = await fetch("/api/endpoint", {
@@ -102,7 +111,9 @@ export default function NewsAnalyzer() {
             setResults(data);
         } catch (error: unknown) {
             console.error(error);
-            setError("Failed to analyze the article. Please try again later.");
+            setError(
+                "Failed to evaluate the article. Please check the URL and try again.",
+            );
         } finally {
             setIsLoading(false);
         }
@@ -112,7 +123,10 @@ export default function NewsAnalyzer() {
         <main className="container mx-auto max-w-6xl space-y-6 px-4 py-6">
             <header className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
                 <h1 className="text-4xl font-bold tracking-tight">
-                    News Article Analyzer <span className="text-lg font-normal text-muted-foreground">with Source Assessment</span>
+                    The Credibility Compass{" "}
+                    <span className="text-muted-foreground text-lg font-normal">
+                        News Evaluation Tool
+                    </span>
                 </h1>
 
                 <div className="flex items-center gap-3">
@@ -132,57 +146,37 @@ export default function NewsAnalyzer() {
                 {/* Input Section */}
                 <Card className="h-fit lg:col-span-1">
                     <CardHeader>
-                        <CardTitle>Enter News Article</CardTitle>
+                        <CardTitle>Navigate the News</CardTitle>
                         <CardDescription>
-                            Paste a URL or the full text of a news article to
-                            analyze its factuality, bias, political leaning, and sentiment.
+                            Enter a news article URL to evaluate its
+                            credibility, factual accuracy, bias, and political
+                            orientation.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <Tabs
-                                defaultValue="url"
-                                onValueChange={(value) =>
-                                    setInputType(value as "url" | "text")
-                                }
-                            >
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="url">URL</TabsTrigger>
-                                    <TabsTrigger value="text">Text</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="url" className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="article-url">
-                                            Article URL
-                                        </Label>
-                                        <Input
-                                            id="article-url"
-                                            placeholder="https://example.com/news/article"
-                                            value={inputValue}
-                                            onChange={(e) =>
-                                                setInputValue(e.target.value)
-                                            }
-                                            className="w-full"
-                                        />
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="text" className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="article-text">
-                                            Article Text
-                                        </Label>
-                                        <Textarea
-                                            id="article-text"
-                                            placeholder="Paste the full text of the article here..."
-                                            className="min-h-[150px]"
-                                            value={inputValue}
-                                            onChange={(e) =>
-                                                setInputValue(e.target.value)
-                                            }
-                                        />
-                                    </div>
-                                </TabsContent>
-                            </Tabs>
+                            <div className="space-y-2">
+                                <Label htmlFor="article-url">Article URL</Label>
+                                <Input
+                                    id="article-url"
+                                    type="url"
+                                    placeholder="Enter a news article URL (e.g., https://news-site.com/article)"
+                                    value={inputValue}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setInputValue(value);
+                                        setIsValidUrl(validateUrl(value));
+                                    }}
+                                    className={`w-full ${!isValidUrl ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                                    required
+                                />
+                                {!isValidUrl && (
+                                    <p className="mt-1 text-xs text-red-500">
+                                        Please enter a valid URL (must start
+                                        with http:// or https://)
+                                    </p>
+                                )}
+                            </div>
 
                             {error && (
                                 <Alert variant="destructive">
@@ -201,18 +195,19 @@ export default function NewsAnalyzer() {
                                 {isLoading ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Analyzing...
+                                        Evaluating...
                                     </>
                                 ) : (
-                                    "Analyze Article"
+                                    "Evaluate Article"
                                 )}
                             </Button>
                         </form>
                     </CardContent>
                     <CardFooter className="text-muted-foreground text-xs">
-                        This tool analyzes news articles for factuality,
-                        political bias, source credibility, and sentiment.
-                        Results are provided for educational purposes.
+                        The Credibility Compass evaluates news articles from
+                        URLs for factual accuracy, political leaning, source
+                        credibility, and sentiment. Results are provided for
+                        educational purposes.
                     </CardFooter>
                 </Card>
 
@@ -224,7 +219,7 @@ export default function NewsAnalyzer() {
                                 <Loader2 className="text-primary mx-auto h-10 w-10 animate-spin" />
                                 <div className="space-y-2">
                                     <p className="text-lg">
-                                        Analyzing article content...
+                                        Evaluating article credibility...
                                     </p>
                                     <p className="text-muted-foreground text-sm">
                                         This may take a few moments
@@ -294,34 +289,56 @@ export default function NewsAnalyzer() {
                                             <div className="flex flex-col gap-4">
                                                 {/* Article Factuality */}
                                                 <div className="space-y-3">
-                                                    <h3 className="text-base font-medium">Article:</h3>
-                                                    <span 
+                                                    <h3 className="text-base font-medium">
+                                                        Article:
+                                                    </h3>
+                                                    <span
                                                         className={`inline-block rounded-md px-2 py-1 text-base font-medium ${
-                                                            results.factuality.article.rating === "Very Factual" || 
-                                                            results.factuality.article.rating === "Mostly Factual"
+                                                            results.factuality
+                                                                .article
+                                                                .rating ===
+                                                                "Very Factual" ||
+                                                            results.factuality
+                                                                .article
+                                                                .rating ===
+                                                                "Mostly Factual"
                                                                 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                                                : results.factuality.article.rating === "Mixed Factuality"
-                                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" 
-                                                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                                                : results
+                                                                        .factuality
+                                                                        .article
+                                                                        .rating ===
+                                                                    "Mixed Factuality"
+                                                                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+                                                                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                                                         }`}
                                                     >
-                                                        {results.factuality.article.rating}
+                                                        {
+                                                            results.factuality
+                                                                .article.rating
+                                                        }
                                                     </span>
                                                     <div className="space-y-1">
                                                         <div className="flex items-center justify-between text-sm">
-                                                            <span>Confidence</span>
+                                                            <span>
+                                                                Confidence
+                                                            </span>
                                                             <span className="font-medium">
                                                                 {Math.round(
-                                                                    results.factuality
-                                                                        .article.confidence *
-                                                                    100
-                                                                )}%
+                                                                    results
+                                                                        .factuality
+                                                                        .article
+                                                                        .confidence *
+                                                                        100,
+                                                                )}
+                                                                %
                                                             </span>
                                                         </div>
                                                         <Progress
                                                             value={
-                                                                results.factuality
-                                                                    .article.confidence *
+                                                                results
+                                                                    .factuality
+                                                                    .article
+                                                                    .confidence *
                                                                 100
                                                             }
                                                             className="h-2"
@@ -330,35 +347,57 @@ export default function NewsAnalyzer() {
                                                 </div>
 
                                                 {/* Source Factuality */}
-                                                <div className="pt-2 space-y-3 border-t">
-                                                    <h3 className="text-base font-medium">Source:</h3>
-                                                    <span 
+                                                <div className="space-y-3 border-t pt-2">
+                                                    <h3 className="text-base font-medium">
+                                                        Source:
+                                                    </h3>
+                                                    <span
                                                         className={`inline-block rounded-md px-2 py-1 text-base font-medium ${
-                                                            results.factuality.source.rating === "Very Factual" || 
-                                                            results.factuality.source.rating === "Mostly Factual"
+                                                            results.factuality
+                                                                .source
+                                                                .rating ===
+                                                                "Very Factual" ||
+                                                            results.factuality
+                                                                .source
+                                                                .rating ===
+                                                                "Mostly Factual"
                                                                 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                                                : results.factuality.source.rating === "Mixed Factuality"
-                                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" 
-                                                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                                                : results
+                                                                        .factuality
+                                                                        .source
+                                                                        .rating ===
+                                                                    "Mixed Factuality"
+                                                                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+                                                                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                                                         }`}
                                                     >
-                                                        {results.factuality.source.rating}
+                                                        {
+                                                            results.factuality
+                                                                .source.rating
+                                                        }
                                                     </span>
                                                     <div className="space-y-1">
                                                         <div className="flex items-center justify-between text-sm">
-                                                            <span>Confidence</span>
+                                                            <span>
+                                                                Confidence
+                                                            </span>
                                                             <span className="font-medium">
                                                                 {Math.round(
-                                                                    results.factuality
-                                                                        .source.confidence *
-                                                                    100
-                                                                )}%
+                                                                    results
+                                                                        .factuality
+                                                                        .source
+                                                                        .confidence *
+                                                                        100,
+                                                                )}
+                                                                %
                                                             </span>
                                                         </div>
                                                         <Progress
                                                             value={
-                                                                results.factuality
-                                                                    .source.confidence *
+                                                                results
+                                                                    .factuality
+                                                                    .source
+                                                                    .confidence *
                                                                 100
                                                             }
                                                             className="h-2"
@@ -366,11 +405,14 @@ export default function NewsAnalyzer() {
                                                     </div>
                                                 </div>
 
-                                                {results.factuality.article.sources &&
-                                                    results.factuality.article.sources.length > 0 && (
-                                                        <div className="mt-2 pt-2 border-t">
+                                                {results.factuality.article
+                                                    .sources &&
+                                                    results.factuality.article
+                                                        .sources.length > 0 && (
+                                                        <div className="mt-2 border-t pt-2">
                                                             <h4 className="mb-1 text-sm font-medium">
-                                                                Supporting Sources:
+                                                                Supporting
+                                                                Sources:
                                                             </h4>
                                                             <ul className="text-muted-foreground space-y-1 text-xs">
                                                                 {results.factuality.article.sources.map(
@@ -563,9 +605,12 @@ export default function NewsAnalyzer() {
                                                             Credibility:
                                                         </span>
                                                         <span className="text-sm">
-                                                            {results.source.credibility.toFixed(
+                                                            {/* {results.source.credibility.toFixed(
                                                                 2,
-                                                            )}
+                                                            )} */}
+                                                            {new Number(
+                                                                results.source.credibility,
+                                                            ).toFixed(2)}
                                                         </span>
                                                     </div>
                                                     <div className="bg-muted relative h-2 w-full overflow-hidden rounded-full">
@@ -593,11 +638,18 @@ export default function NewsAnalyzer() {
                                                         ></div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 {results.source.reasoning && (
-                                                    <div className="border-t pt-3 mt-4">
-                                                        <h4 className="text-muted-foreground text-sm font-medium mb-1">Source Analysis:</h4>
-                                                        <p className="text-muted-foreground text-xs">{results.source.reasoning}</p>
+                                                    <div className="mt-4 border-t pt-3">
+                                                        <h4 className="text-muted-foreground mb-1 text-sm font-medium">
+                                                            Source Analysis:
+                                                        </h4>
+                                                        <p className="text-muted-foreground text-xs">
+                                                            {
+                                                                results.source
+                                                                    .reasoning
+                                                            }
+                                                        </p>
                                                     </div>
                                                 )}
                                             </div>
@@ -619,35 +671,78 @@ export default function NewsAnalyzer() {
                                         <div className="space-y-6">
                                             {/* Article Political Leaning */}
                                             <div className="space-y-4">
-                                                <h3 className="text-base font-medium">Article:</h3>
+                                                <h3 className="text-base font-medium">
+                                                    Article:
+                                                </h3>
                                                 <div>
                                                     {(() => {
-                                                        const category = results.politicalLeaning.article.category ??
-                                                            (results.politicalLeaning.article.score < 21
+                                                        const category =
+                                                            results
+                                                                .politicalLeaning
+                                                                .article
+                                                                .category ??
+                                                            (results
+                                                                .politicalLeaning
+                                                                .article.score <
+                                                            21
                                                                 ? "Far Left"
-                                                                : results.politicalLeaning.article.score < 41
-                                                                    ? "Center-Left"
-                                                                    : results.politicalLeaning.article.score < 61
-                                                                        ? "Centrist"
-                                                                        : results.politicalLeaning.article.score < 81
-                                                                            ? "Center-Right"
-                                                                            : "Far Right");
-                                                        
+                                                                : results
+                                                                        .politicalLeaning
+                                                                        .article
+                                                                        .score <
+                                                                    41
+                                                                  ? "Center-Left"
+                                                                  : results
+                                                                          .politicalLeaning
+                                                                          .article
+                                                                          .score <
+                                                                      61
+                                                                    ? "Centrist"
+                                                                    : results
+                                                                            .politicalLeaning
+                                                                            .article
+                                                                            .score <
+                                                                        81
+                                                                      ? "Center-Right"
+                                                                      : "Far Right");
+
                                                         let bgClass = "";
-                                                        if (category === "Far Left") {
-                                                            bgClass = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300";
-                                                        } else if (category === "Center-Left") {
-                                                            bgClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-                                                        } else if (category === "Centrist") {
-                                                            bgClass = "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-                                                        } else if (category === "Center-Right") {
-                                                            bgClass = "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
-                                                        } else if (category === "Far Right") {
-                                                            bgClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+                                                        if (
+                                                            category ===
+                                                            "Far Left"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300";
+                                                        } else if (
+                                                            category ===
+                                                            "Center-Left"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+                                                        } else if (
+                                                            category ===
+                                                            "Centrist"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+                                                        } else if (
+                                                            category ===
+                                                            "Center-Right"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+                                                        } else if (
+                                                            category ===
+                                                            "Far Right"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
                                                         }
-                                                        
+
                                                         return (
-                                                            <span className={`inline-block rounded-md px-3 py-1 text-base font-medium ${bgClass}`}>
+                                                            <span
+                                                                className={`inline-block rounded-md px-3 py-1 text-base font-medium ${bgClass}`}
+                                                            >
                                                                 {category}
                                                             </span>
                                                         );
@@ -670,8 +765,8 @@ export default function NewsAnalyzer() {
                                                     </div>
                                                 </div>
 
-                                                {results.politicalLeaning.article
-                                                    .reasoning && (
+                                                {results.politicalLeaning
+                                                    .article.reasoning && (
                                                     <div className="text-muted-foreground mt-2 text-sm">
                                                         <h4 className="mb-1 font-medium">
                                                             Analysis:
@@ -679,45 +774,89 @@ export default function NewsAnalyzer() {
                                                         <p>
                                                             {
                                                                 results
-                                                                    .politicalLeaning.article
+                                                                    .politicalLeaning
+                                                                    .article
                                                                     .reasoning
                                                             }
                                                         </p>
                                                     </div>
                                                 )}
                                             </div>
-                                            
+
                                             {/* Source Political Leaning */}
-                                            <div className="pt-4 border-t space-y-4">
-                                                <h3 className="text-base font-medium">Source:</h3>
+                                            <div className="space-y-4 border-t pt-4">
+                                                <h3 className="text-base font-medium">
+                                                    Source:
+                                                </h3>
                                                 <div>
                                                     {(() => {
-                                                        const category = results.politicalLeaning.source.category ??
-                                                            (results.politicalLeaning.source.score < 21
+                                                        const category =
+                                                            results
+                                                                .politicalLeaning
+                                                                .source
+                                                                .category ??
+                                                            (results
+                                                                .politicalLeaning
+                                                                .source.score <
+                                                            21
                                                                 ? "Far Left"
-                                                                : results.politicalLeaning.source.score < 41
-                                                                    ? "Center-Left"
-                                                                    : results.politicalLeaning.source.score < 61
-                                                                        ? "Centrist"
-                                                                        : results.politicalLeaning.source.score < 81
-                                                                            ? "Center-Right"
-                                                                            : "Far Right");
-                                                        
+                                                                : results
+                                                                        .politicalLeaning
+                                                                        .source
+                                                                        .score <
+                                                                    41
+                                                                  ? "Center-Left"
+                                                                  : results
+                                                                          .politicalLeaning
+                                                                          .source
+                                                                          .score <
+                                                                      61
+                                                                    ? "Centrist"
+                                                                    : results
+                                                                            .politicalLeaning
+                                                                            .source
+                                                                            .score <
+                                                                        81
+                                                                      ? "Center-Right"
+                                                                      : "Far Right");
+
                                                         let bgClass = "";
-                                                        if (category === "Far Left") {
-                                                            bgClass = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300";
-                                                        } else if (category === "Center-Left") {
-                                                            bgClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-                                                        } else if (category === "Centrist") {
-                                                            bgClass = "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-                                                        } else if (category === "Center-Right") {
-                                                            bgClass = "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
-                                                        } else if (category === "Far Right") {
-                                                            bgClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+                                                        if (
+                                                            category ===
+                                                            "Far Left"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300";
+                                                        } else if (
+                                                            category ===
+                                                            "Center-Left"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+                                                        } else if (
+                                                            category ===
+                                                            "Centrist"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+                                                        } else if (
+                                                            category ===
+                                                            "Center-Right"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+                                                        } else if (
+                                                            category ===
+                                                            "Far Right"
+                                                        ) {
+                                                            bgClass =
+                                                                "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
                                                         }
-                                                        
+
                                                         return (
-                                                            <span className={`inline-block rounded-md px-3 py-1 text-base font-medium ${bgClass}`}>
+                                                            <span
+                                                                className={`inline-block rounded-md px-3 py-1 text-base font-medium ${bgClass}`}
+                                                            >
                                                                 {category}
                                                             </span>
                                                         );
@@ -749,7 +888,8 @@ export default function NewsAnalyzer() {
                                                         <p>
                                                             {
                                                                 results
-                                                                    .politicalLeaning.source
+                                                                    .politicalLeaning
+                                                                    .source
                                                                     .reasoning
                                                             }
                                                         </p>
@@ -778,20 +918,30 @@ export default function NewsAnalyzer() {
                                                     Overall Sentiment
                                                 </h3>
                                                 <div className="mb-1.5 flex items-center justify-between">
-                                                    <span 
+                                                    <span
                                                         className={`inline-block rounded-md px-2 py-1 text-sm font-medium ${
-                                                            results.sentiment.overall.score > 0.2
+                                                            results.sentiment
+                                                                .overall.score >
+                                                            0.2
                                                                 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                                                : results.sentiment.overall.score < -0.2
-                                                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                                                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                                                                : results
+                                                                        .sentiment
+                                                                        .overall
+                                                                        .score <
+                                                                    -0.2
+                                                                  ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                                                  : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                                                         }`}
                                                     >
-                                                        {results.sentiment.overall.score > 0.2
+                                                        {results.sentiment
+                                                            .overall.score > 0.2
                                                             ? "Positive"
-                                                            : results.sentiment.overall.score < -0.2
-                                                                ? "Negative"
-                                                                : "Neutral"}
+                                                            : results.sentiment
+                                                                    .overall
+                                                                    .score <
+                                                                -0.2
+                                                              ? "Negative"
+                                                              : "Neutral"}
                                                     </span>
                                                     <span className="text-muted-foreground text-sm">
                                                         Score:{" "}
@@ -893,7 +1043,9 @@ export default function NewsAnalyzer() {
                                                 entities={
                                                     results.sentiment.entities
                                                 }
-                                                sourceDomain={results.source.url}
+                                                sourceDomain={
+                                                    results.source.url
+                                                }
                                             />
                                         ) : (
                                             <p className="text-muted-foreground">
