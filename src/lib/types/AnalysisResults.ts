@@ -1,7 +1,8 @@
 export interface AnalysisResults {
     factuality: {
-        rating: string;
         confidence: number;
+        sources: string[];
+        rating?: string;  // Text label for the factuality rating
     };
     source: {
         name: string;
@@ -9,12 +10,12 @@ export interface AnalysisResults {
         reliability: string;
     };
     politicalLeaning: {
-        rating: string;
         score: number;
+        category?: string;
+        reasoning?: string;
     };
     sentiment: {
         overall: {
-            rating: string;
             score: number;
         };
         entities: Array<{
