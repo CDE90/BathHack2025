@@ -1,13 +1,13 @@
 "use client";
 
-import React from "react";
-import ReactMarkdown from "react-markdown";
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import React from "react";
+import ReactMarkdown from "react-markdown";
 
 interface ArticleRendererProps {
     content: string;
@@ -26,27 +26,170 @@ export function ArticleRenderer({
             return content;
         }
 
-        let modifiedContent = content;
-
         // Sort entities by name length (descending) to avoid replacing parts of longer entities first
         const sortedEntities = [...entities].sort(
             (a, b) => b.name.length - a.name.length,
         );
 
-        // Replace each entity with a markdown link that includes sentiment data
-        sortedEntities.forEach((entity) => {
-            const { name, score } = entity;
+        // Split the content into segments that should be processed (text) and
+        // segments that should be protected (URLs, HTML attributes, etc.)
+        function processSafely(text: string): string {
+            // First, clean up any HTML spans that we don't need
+            let cleanedText = text;
 
-            // Create a markdown format sentiment link: [entity name](sentiment:score)
-            const sentimentLink = `[${name}](https://sentiment-link/${score})`;
+            // Remove span elements with classes related to captions and styling
+            cleanedText = cleanedText
+                .replace(
+                    /<span[^>]*(?:visually-hidden|StyledFigure|Caption)[^>]*>.*?[\r?\n]*?<\/span>/gi,
+                    "",
+                )
+                .replace(
+                    /<figcaption[^>]*(?:visually-hidden|StyledFigure|Caption)[^>]*>.*?[\r?\n]*?<\/figcaption>/gi,
+                    "",
+                );
 
-            // Replace all occurrences using word boundaries
-            const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const regex = new RegExp(`\\b${escapedName}\\b`, "gi");
-            modifiedContent = modifiedContent.replace(regex, sentimentLink);
-        });
+            // Remove other common non-semantic spans but keep their content
+            cleanedText = cleanedText
+                .replace(/<span[^>]*>(.*?)[\r?\n]*?<\/span>/gi, "")
+                .replace(/<figcaption[^>]*>(.*?)[\r?\n]*?<\/figcaption>/gi, "");
 
-        return modifiedContent;
+            // Remove any orphaned closing span tags
+            cleanedText = cleanedText.replace(/<\/span>/gi, "");
+
+            // Use a more structured approach to safely process content
+            // We'll split content into protected and processable segments
+
+            // Define patterns to protect
+            const patterns = [
+                // 1. Full markdown image syntax - most restrictive first
+                /!\[[^\]]*\]\([^)]*\)/g,
+                // 2. Markdown link syntax
+                /\[[^\]]*\]\([^)]*\)/g,
+                // 3. HTML img tags (keep these since they're important)
+                /<img[^>]+>/g,
+                // 4. HTML attributes with URLs
+                /(src|href|alt|title)=["']([^"']+)["']/g,
+                // 5. Raw URLs
+                /https?:\/\/[^\s)'"]+/g,
+            ];
+
+            // First, mark all protected areas
+            const workingText = cleanedText;
+            const matches: Array<{
+                index: number;
+                length: number;
+                text: string;
+            }> = [];
+
+            // Find all matches from all patterns
+            patterns.forEach((pattern) => {
+                let match;
+                const regex = new RegExp(pattern);
+                let tempText = workingText;
+                let offset = 0;
+
+                // We need to reset the regex for each iteration
+                while ((match = regex.exec(tempText)) !== null) {
+                    matches.push({
+                        index: match.index + offset,
+                        length: match[0].length,
+                        text: match[0],
+                    });
+
+                    // Move past this match
+                    const matchEndPos = match.index + match[0].length;
+                    tempText = tempText.substring(matchEndPos);
+                    offset += matchEndPos;
+                    regex.lastIndex = 0; // Reset regex
+                }
+            });
+
+            // Sort matches by their starting position
+            matches.sort((a, b) => a.index - b.index);
+
+            // Filter out overlapping matches (keep the ones that start first)
+            const filteredMatches: Array<{
+                index: number;
+                length: number;
+                text: string;
+            }> = [];
+            let lastEnd = 0;
+
+            matches.forEach((match) => {
+                if (match.index >= lastEnd) {
+                    filteredMatches.push(match);
+                    lastEnd = match.index + match.length;
+                }
+            });
+
+            // Build segments by splitting the original text
+            const segments: Array<{
+                type: "text" | "protected";
+                content: string;
+            }> = [];
+            let currentPos = 0;
+
+            filteredMatches.forEach((match) => {
+                // Add text segment before this match (if any)
+                if (match.index > currentPos) {
+                    segments.push({
+                        type: "text",
+                        content: workingText.substring(currentPos, match.index),
+                    });
+                }
+
+                // Add the protected segment
+                segments.push({
+                    type: "protected",
+                    content: match.text,
+                });
+
+                currentPos = match.index + match.length;
+            });
+
+            // Add final text segment if any
+            if (currentPos < workingText.length) {
+                segments.push({
+                    type: "text",
+                    content: workingText.substring(currentPos),
+                });
+            }
+
+            // Process each segment
+            const processedSegments = segments.map((segment) => {
+                if (segment.type === "protected") {
+                    // Keep protected segments unchanged
+                    return segment.content;
+                } else {
+                    // Process entities in text segments
+                    let processedText = segment.content;
+                    sortedEntities.forEach((entity) => {
+                        const { name, score } = entity;
+
+                        // Create a markdown format sentiment link
+                        const sentimentLink = `[${name}](https://sentiment-link/${score})`;
+
+                        // Replace all occurrences using word boundaries
+                        const escapedName = name.replace(
+                            /[.*+?^${}()|[\]\\]/g,
+                            "\\$&",
+                        );
+                        const regex = new RegExp(`\\b${escapedName}\\b`, "gi");
+                        processedText = processedText.replace(
+                            regex,
+                            sentimentLink,
+                        );
+                    });
+                    return processedText;
+                }
+            });
+
+            // Join all processed segments back together
+            return processedSegments.join("");
+        }
+
+        // Process the content safely
+        return processSafely(content);
     }, [content, entities]);
 
     // Get color based on sentiment score
@@ -124,20 +267,28 @@ export function ArticleRenderer({
 
                         // Regular links - handle relative and absolute URLs
                         let fullHref = href;
-                        
+
                         // Check if it's a relative URL (starts with / but not //) and we have a source domain
-                        if (href && href.startsWith('/') && !href.startsWith('//') && sourceDomain) {
+                        if (
+                            href &&
+                            href.startsWith("/") &&
+                            !href.startsWith("//") &&
+                            sourceDomain
+                        ) {
                             // Clean domain - remove protocol if exists, and ensure no trailing slash
                             let domain = sourceDomain;
-                            if (domain.startsWith('http://') || domain.startsWith('https://')) {
-                                domain = domain.replace(/^https?:\/\//, '');
+                            if (
+                                domain.startsWith("http://") ||
+                                domain.startsWith("https://")
+                            ) {
+                                domain = domain.replace(/^https?:\/\//, "");
                             }
-                            domain = domain.replace(/\/$/, '');
-                            
+                            domain = domain.replace(/\/$/, "");
+
                             // Construct full URL
                             fullHref = `https://${domain}${href}`;
                         }
-                        
+
                         return (
                             <a
                                 href={fullHref}

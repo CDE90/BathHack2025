@@ -27,7 +27,7 @@ import {
     Loader2,
     Scale,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ExtendedAnalysisResults extends AnalysisResults {
     article?: {
@@ -35,6 +35,38 @@ interface ExtendedAnalysisResults extends AnalysisResults {
         content: string;
         url?: string;
     };
+}
+
+// Component for realistic progress bar animation
+function AnimatedProgress() {
+    const [progress, setProgress] = useState(15);
+
+    useEffect(() => {
+        // Initial jumps to simulate fast initial processing
+        const timer1 = setTimeout(() => setProgress(35), 800);
+        const timer2 = setTimeout(() => setProgress(42), 1600);
+
+        // Slower increments to simulate real processing work
+        const interval = setInterval(() => {
+            setProgress((prev) => {
+                // Gradually slow down as we approach higher percentages
+                if (prev < 50) return prev + 3;
+                if (prev < 70) return prev + 2;
+                if (prev < 85) return prev + 0.8;
+                if (prev < 95) return prev + 0.3;
+                // Cap at 95% - the last 5% happens when actual results arrive
+                return 95;
+            });
+        }, 900);
+
+        return () => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+            clearInterval(interval);
+        };
+    }, []);
+
+    return <Progress value={progress} className="h-2 w-[250px]" />;
 }
 
 export default function NewsAnalyzer() {
@@ -211,6 +243,69 @@ export default function NewsAnalyzer() {
                     </CardFooter>
                 </Card>
 
+                {/* Guidance Card - Only visible on large screens when no results */}
+                {!results && !isLoading && (
+                    <Card className="flex-col lg:col-span-2 lg:flex">
+                        <CardHeader>
+                            <CardTitle>The Credibility Compass</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-1 flex-col justify-center p-8">
+                            <div className="space-y-6 text-center">
+                                <div className="bg-muted mx-auto flex h-20 w-20 items-center justify-center rounded-full">
+                                    <Scale className="text-primary h-10 w-10" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-semibold">
+                                        Analyze Any News Article
+                                    </h3>
+                                    <p className="text-muted-foreground">
+                                        Enter a URL in the form to the left to
+                                        get started. We&apos;ll analyze the
+                                        article for:
+                                    </p>
+                                    <ul className="text-muted-foreground mx-auto mt-4 max-w-xs space-y-2 text-left">
+                                        <li className="flex items-start">
+                                            <Check className="mt-0.5 mr-2 h-5 w-5 text-green-500" />
+                                            <span>
+                                                Factual accuracy and supporting
+                                                evidence
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <Info className="mt-0.5 mr-2 h-5 w-5 text-blue-500" />
+                                            <span>
+                                                Source reliability and
+                                                credibility
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <Scale className="mt-0.5 mr-2 h-5 w-5 text-purple-500" />
+                                            <span>
+                                                Political bias and orientation
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <AlertCircle className="mt-0.5 mr-2 h-5 w-5 text-yellow-500" />
+                                            <span>
+                                                Sentiment analysis of key
+                                                entities
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="bg-muted/10 justify-center p-6">
+                            <p className="text-muted-foreground text-center text-sm">
+                                Paste any news article URL to get a
+                                comprehensive analysis of its credibility and
+                                learn how to navigate today&apos;s complex media
+                                landscape.
+                            </p>
+                        </CardFooter>
+                    </Card>
+                )}
+
                 {/* Results Section */}
                 {isLoading ? (
                     <Card className="lg:col-span-2">
@@ -225,10 +320,7 @@ export default function NewsAnalyzer() {
                                         This may take a few moments
                                     </p>
                                 </div>
-                                <Progress
-                                    value={45}
-                                    className="h-2 w-[250px]"
-                                />
+                                <AnimatedProgress />
                             </div>
                         </CardContent>
                     </Card>
@@ -277,7 +369,7 @@ export default function NewsAnalyzer() {
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     {/* Factuality Section */}
                                     <Card className="overflow-hidden">
-                                        <CardHeader className="bg-muted/30 pb-2">
+                                        <CardHeader className="pb-2">
                                             <div className="flex items-center">
                                                 <Check className="mr-2 h-5 w-5 text-green-500" />
                                                 <CardTitle className="text-base">
@@ -466,7 +558,7 @@ export default function NewsAnalyzer() {
 
                                     {/* Source Section */}
                                     <Card className="overflow-hidden">
-                                        <CardHeader className="bg-muted/30 pb-2">
+                                        <CardHeader className="pb-2">
                                             <div className="flex items-center">
                                                 <Info className="mr-2 h-5 w-5 text-blue-500" />
                                                 <CardTitle className="text-base">
@@ -659,7 +751,7 @@ export default function NewsAnalyzer() {
 
                                 {/* Political Leaning Section */}
                                 <Card className="overflow-hidden">
-                                    <CardHeader className="bg-muted/30 pb-2">
+                                    <CardHeader className="pb-2">
                                         <div className="flex items-center">
                                             <Scale className="mr-2 h-5 w-5 text-purple-500" />
                                             <CardTitle className="text-base">
@@ -902,7 +994,7 @@ export default function NewsAnalyzer() {
 
                                 {/* Sentiment Analysis Section */}
                                 <Card className="overflow-hidden">
-                                    <CardHeader className="bg-muted/30 pb-2">
+                                    <CardHeader className="pb-2">
                                         <div className="flex items-center">
                                             <AlertCircle className="mr-2 h-5 w-5 text-yellow-500" />
                                             <CardTitle className="text-base">
@@ -1028,7 +1120,7 @@ export default function NewsAnalyzer() {
 
                             <TabsContent value="article" className="mt-0">
                                 <Card>
-                                    <CardHeader className="bg-muted/30">
+                                    <CardHeader>
                                         <CardTitle>
                                             {results.article?.title ??
                                                 "Article Content"}
