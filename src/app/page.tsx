@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
     AlertCircle,
     Check,
@@ -10,7 +10,6 @@ import {
     Info,
     Loader2,
     Scale,
-    Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,71 +48,6 @@ export default function NewsAnalyzer() {
     const [activeTab, setActiveTab] = useState<"analysis" | "article">(
         "analysis",
     );
-    const [fetchedHtml, setFetchedHtml] = useState<string | null>(null);
-    const [isFetchingHtml, setIsFetchingHtml] = useState(false);
-    const iframeRef = useRef<HTMLIFrameElement>(null);
-
-    // Function to fetch URL content using iframe
-    const fetchUrlContent = async (url: string) => {
-        if (!url.trim() || !url.startsWith("http")) {
-            setError(
-                "Please enter a valid URL starting with http:// or https://",
-            );
-            return;
-        }
-
-        setIsFetchingHtml(true);
-        setFetchedHtml(null);
-
-        try {
-            // Create a proxy URL to bypass CORS restrictions (this is for demo purposes)
-            // In production, you would use a server-side proxy or other approach
-            const proxyUrl = `https://cors-anywhere.herokuapp.com/${url}`;
-
-            // Fetch HTML directly (this might not work for some sites due to CORS)
-            const response = await fetch(proxyUrl);
-            const html = await response.text();
-
-            // Set the fetched HTML
-            setFetchedHtml(html);
-            console.log(
-                "Fetched HTML content:",
-                html.substring(0, 100) + "...",
-            );
-
-            // Alternative approach with iframe - set up for loading a URL
-            if (iframeRef.current) {
-                // Set iframe source
-                iframeRef.current.src = url;
-
-                // Listen for iframe to load (may not work for cross-origin content)
-                iframeRef.current.onload = () => {
-                    try {
-                        if (iframeRef.current?.contentDocument) {
-                            const iframeHtml =
-                                iframeRef.current.contentDocument
-                                    .documentElement.outerHTML;
-                            console.log(
-                                "Iframe HTML content:",
-                                iframeHtml.substring(0, 100) + "...",
-                            );
-                            // You can use this as an alternative if the fetch approach doesn't work
-                        }
-                    } catch (e) {
-                        // Most likely a cross-origin error
-                        console.error("Cross-origin access prevented:", e);
-                    }
-                };
-            }
-        } catch (e) {
-            console.error("Error fetching URL content:", e);
-            setError(
-                `Failed to fetch content from URL: ${e instanceof Error ? e.message : String(e)}`,
-            );
-        } finally {
-            setIsFetchingHtml(false);
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -124,97 +58,47 @@ export default function NewsAnalyzer() {
             return;
         }
 
-        // If URL is selected, fetch the content
-        if (inputType === "url") {
-            await fetchUrlContent(inputValue);
-            // If we encountered an error during fetching, don't proceed
-            if (error) return;
-        }
-
         setIsLoading(true);
 
-        // Make the API call with the fetched content
+        // Make the API call directly, sending either the URL or text content
         try {
-            // Prepare the request payload based on input type
-            const analysisRequest = {
-                content:
-                    inputType === "url" && fetchedHtml
-                        ? fetchedHtml
-                        : inputValue,
-                isHtml: inputType === "url" && fetchedHtml ? true : false,
-            };
+            let analysisRequest;
 
-            // For demo purposes, simulate delay
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            if (inputType === "url") {
+                // For URLs, send the URL directly
+                analysisRequest = {
+                    content: inputValue, // Send the URL itself
+                    isHtml: true,
+                    isUrl: true,
+                    url: inputValue,
+                };
+                console.log("Sending URL for analysis:", inputValue);
+            } else {
+                // For plain text
+                analysisRequest = {
+                    content: inputValue,
+                    isHtml: false,
+                };
+            }
 
-            // In a production app, we'd use the fetched HTML in the API call
+            // Make the API call
             const response = await fetch("/api/endpoint", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(analysisRequest),
             });
-            const data = await response.json() as ExtendedAnalysisResults;
 
-            console.log(data);
+            if (!response.ok) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                const errorData = await response.json();
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+                throw new Error(errorData.error ?? "Failed to analyze content");
+            }
+
+            const data = (await response.json()) as ExtendedAnalysisResults;
+            console.log("Analysis results received");
 
             setResults(data);
-
-            //             // For now, use mock data but incorporate the fetched URL
-            //             setResults({
-            //                 factuality: {
-            //                     confidence: 85,
-            //                     sources: ["example.com/sources/1", "example.com/sources/2"],
-            //                 },
-            //                 source: {
-            //                     name: inputType === "url" ? (new URL(inputValue).hostname).replace("www.", "") : "Example News",
-            //                     url: inputType === "url" ? new URL(inputValue).hostname : "example.com",
-            //                     reliability: "Reliable",
-            //                 },
-            //                 politicalLeaning: {
-            //                     score: 35, // 0-100 scale where 0 is far left, 50 is center, 100 is far right
-            //                     category: "Center-Left",
-            //                     reasoning: "The article presents economic policies with a progressive approach focused on government intervention and social welfare programs. It emphasizes benefits to working-class citizens while presenting some corporate-friendly aspects as well. The language is moderately progressive but maintains a somewhat balanced perspective overall."
-            //                 },
-            //                 sentiment: {
-            //                     overall: {
-            //                         rating: "Neutral",
-            //                         score: 0.2, // -1 to 1 scale
-            //                     },
-            //                     entities: [
-            //                         { name: "President Smith", score: 0.7 },
-            //                         { name: "New Policy", score: -0.5 },
-            //                         { name: "Economic Reform", score: 0.3 },
-            //                         { name: "Opposition Party", score: -0.6 },
-            //                     ],
-            //                 },
-            //                 article: {
-            //                     title: inputType === "url" ? `Article from ${new URL(inputValue).hostname}` : "Sample Article Title",
-            //                     content: fetchedHtml ? `# Fetched Article Content\n\nThis article was fetched from ${inputValue}.\n\n> "This comprehensive approach will help stabilize our economy while promoting sustainable growth," said President Smith during the press conference.\n\nThe Opposition Party has criticized the plan as **insufficient** and called for more direct support to citizens.` : `# Government Announces New Economic Policy
-
-            // ## Introduction
-
-            // The government announced a new economic policy today that aims to address rising inflation and unemployment.
-
-            // ### Key Points
-
-            // * Interest rates will be adjusted quarterly based on inflation metrics
-            // * A $500 million fund will be established for small business grants
-            // * New tax incentives for companies that invest in renewable energy
-
-            // > "This comprehensive approach will help stabilize our economy while promoting sustainable growth," said President Smith during the press conference.
-
-            // The Opposition Party has criticized the plan as **insufficient** and called for more direct support to citizens.
-
-            // #### Market Response
-
-            // Initial market response has been positive, with the stock market rising 2% following the announcement.
-
-            // ![Market Graph](https://example.com/market-graph.png)
-
-            // Read more [here](https://example.com/policy-details).`,
-            //                     url: inputType === "url" ? inputValue : undefined,
-            //                 },
-            //             });
         } catch (error: unknown) {
             console.error(error);
             setError("Failed to analyze the article. Please try again later.");
@@ -269,38 +153,15 @@ export default function NewsAnalyzer() {
                                         <Label htmlFor="article-url">
                                             Article URL
                                         </Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="article-url"
-                                                placeholder="https://example.com/news/article"
-                                                value={inputValue}
-                                                onChange={(e) =>
-                                                    setInputValue(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="flex-1"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="icon"
-                                                onClick={() =>
-                                                    fetchUrlContent(inputValue)
-                                                }
-                                                disabled={
-                                                    isFetchingHtml ||
-                                                    !inputValue.trim()
-                                                }
-                                                title="Fetch URL content"
-                                            >
-                                                {isFetchingHtml ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Globe className="h-4 w-4" />
-                                                )}
-                                            </Button>
-                                        </div>
+                                        <Input
+                                            id="article-url"
+                                            placeholder="https://example.com/news/article"
+                                            value={inputValue}
+                                            onChange={(e) =>
+                                                setInputValue(e.target.value)
+                                            }
+                                            className="w-full"
+                                        />
                                     </div>
                                 </TabsContent>
                                 <TabsContent value="text" className="space-y-4">
@@ -451,30 +312,59 @@ export default function NewsAnalyzer() {
                                                         className="h-2"
                                                     />
                                                 </div>
-                                                {results.factuality.sources && results.factuality.sources.length > 0 && (
-                                                    <div className="mt-2">
-                                                        <h4 className="text-sm font-medium mb-1">Sources:</h4>
-                                                        <ul className="text-xs text-muted-foreground space-y-1">
-                                                            {results.factuality.sources.map((source, index) => (
-                                                                <li key={index} className="flex items-center">
-                                                                    <span className="mr-1">•</span>
-                                                                    {source.startsWith('http') ? (
-                                                                        <a 
-                                                                            href={source} 
-                                                                            target="_blank" 
-                                                                            rel="noopener noreferrer"
-                                                                            className="hover:underline text-primary truncate"
+                                                {results.factuality.sources &&
+                                                    results.factuality.sources
+                                                        .length > 0 && (
+                                                        <div className="mt-2">
+                                                            <h4 className="mb-1 text-sm font-medium">
+                                                                Sources:
+                                                            </h4>
+                                                            <ul className="text-muted-foreground space-y-1 text-xs">
+                                                                {results.factuality.sources.map(
+                                                                    (
+                                                                        source,
+                                                                        index,
+                                                                    ) => (
+                                                                        <li
+                                                                            key={
+                                                                                index
+                                                                            }
+                                                                            className="flex items-center"
                                                                         >
-                                                                            {new URL(source).hostname}
-                                                                        </a>
-                                                                    ) : (
-                                                                        <span className="truncate">{source}</span>
-                                                                    )}
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
+                                                                            <span className="mr-1">
+                                                                                •
+                                                                            </span>
+                                                                            {source.startsWith(
+                                                                                "http",
+                                                                            ) ? (
+                                                                                <a
+                                                                                    href={
+                                                                                        source
+                                                                                    }
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="text-primary truncate hover:underline"
+                                                                                >
+                                                                                    {
+                                                                                        new URL(
+                                                                                            source,
+                                                                                        )
+                                                                                            .hostname
+                                                                                    }
+                                                                                </a>
+                                                                            ) : (
+                                                                                <span className="truncate">
+                                                                                    {
+                                                                                        source
+                                                                                    }
+                                                                                </span>
+                                                                            )}
+                                                                        </li>
+                                                                    ),
+                                                                )}
+                                                            </ul>
+                                                        </div>
+                                                    )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -596,11 +486,15 @@ export default function NewsAnalyzer() {
                                                 </h3>
                                                 <div className="mb-1.5 flex items-center justify-between">
                                                     <span className="text-base">
-                                                        {results.sentiment.overall.score > 0.2
+                                                        {results.sentiment
+                                                            .overall.score > 0.2
                                                             ? "Positive"
-                                                            : results.sentiment.overall.score < -0.2
-                                                            ? "Negative"
-                                                            : "Neutral"}
+                                                            : results.sentiment
+                                                                    .overall
+                                                                    .score <
+                                                                -0.2
+                                                              ? "Negative"
+                                                              : "Neutral"}
                                                     </span>
                                                     <span className="text-muted-foreground text-sm">
                                                         Score:{" "}
@@ -609,13 +503,13 @@ export default function NewsAnalyzer() {
                                                         )}
                                                     </span>
                                                 </div>
-                                                <div className="bg-muted h-2 w-full overflow-hidden rounded-full relative">
+                                                <div className="bg-muted relative h-2 w-full overflow-hidden rounded-full">
                                                     {/* Center line */}
-                                                    <div className="absolute h-full w-0.5 bg-gray-300 dark:bg-gray-700 left-1/2 transform -translate-x-1/2"></div>
-                                                    
+                                                    <div className="absolute left-1/2 h-full w-0.5 -translate-x-1/2 transform bg-gray-300 dark:bg-gray-700"></div>
+
                                                     {/* Sentiment indicator */}
                                                     <div
-                                                        className={`h-full rounded-full absolute ${
+                                                        className={`absolute h-full rounded-full ${
                                                             results.sentiment
                                                                 .overall.score >
                                                             0.2
@@ -629,7 +523,7 @@ export default function NewsAnalyzer() {
                                                                   : "bg-gray-500"
                                                         }`}
                                                         style={{
-                                                            width: '20%', // Constant width of 0.2 units
+                                                            width: "20%", // Constant width of 0.2 units
                                                             left: `${(results.sentiment.overall.score + 1) * 50 - 10}%`, // Center on score (-1 to 1 scale mapped to 0-100%)
                                                         }}
                                                     ></div>
@@ -662,15 +556,15 @@ export default function NewsAnalyzer() {
                                                                         )}
                                                                     </span>
                                                                 </div>
-                                                                <div className="bg-muted h-2 w-full overflow-hidden rounded-full relative">
+                                                                <div className="bg-muted relative h-2 w-full overflow-hidden rounded-full">
                                                                     {/* Center line */}
-                                                                    <div className="absolute h-full w-0.5 bg-gray-300 dark:bg-gray-700 left-1/2 transform -translate-x-1/2"></div>
-                                                                    
+                                                                    <div className="absolute left-1/2 h-full w-0.5 -translate-x-1/2 transform bg-gray-300 dark:bg-gray-700"></div>
+
                                                                     {/* Entity sentiment indicator */}
                                                                     <div
-                                                                        className={`h-full rounded-full absolute ${entity.score > 0 ? "bg-green-500" : "bg-red-500"}`}
+                                                                        className={`absolute h-full rounded-full ${entity.score > 0 ? "bg-green-500" : "bg-red-500"}`}
                                                                         style={{
-                                                                            width: '20%', // Constant width of 0.2 units
+                                                                            width: "20%", // Constant width of 0.2 units
                                                                             left: `${(entity.score + 1) * 50 - 10}%`, // Center on score (-1 to 1 scale mapped to 0-100%)
                                                                         }}
                                                                     ></div>
@@ -715,26 +609,6 @@ export default function NewsAnalyzer() {
                     </div>
                 ) : null}
             </div>
-
-            {/* Hidden iframe for loading URLs (not visible) */}
-            <iframe
-                ref={iframeRef}
-                title="URL Content Loader"
-                style={{
-                    display: "none",
-                    width: 0,
-                    height: 0,
-                    position: "absolute",
-                }}
-                sandbox="allow-same-origin allow-scripts"
-            />
-
-            {/* Debug element to show when fetchedHtml is available */}
-            {fetchedHtml && (
-                <div className="fixed right-4 bottom-4 rounded bg-green-100 p-2 text-xs text-green-800 dark:bg-green-900 dark:text-green-200">
-                    HTML content fetched ({fetchedHtml.length} bytes)
-                </div>
-            )}
         </main>
     );
 }

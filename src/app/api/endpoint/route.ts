@@ -25,9 +25,48 @@ export async function POST(request: Request) {
         let articleContent: string;
         let articleMarkdown: string | undefined;
 
-        // Process the content based on whether it's HTML or plain text
+        // Process based on content type
         if (body.isHtml) {
             try {
+                // Handle URL input, fetch the content server-side
+                if (body.isUrl && body.url) {
+                    console.log("Server-side fetching URL:", body.url);
+                    try {
+                        // Fetch content server-side
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                        const response = await fetch(body.url, {
+                            headers: {
+                                "User-Agent":
+                                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                                "Accept-Language": "en-US,en;q=0.5",
+                            },
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(
+                                `Failed to fetch URL: ${response.status} ${response.statusText}`,
+                            );
+                        }
+
+                        const htmlContent = await response.text();
+                        console.log(
+                            `Fetched ${htmlContent.length} bytes from ${body.url}`,
+                        );
+                        body.content = htmlContent;
+                    } catch (error) {
+                        const fetchError = error as Error;
+                        console.error("Error fetching URL:", fetchError);
+                        return NextResponse.json(
+                            {
+                                error: `Failed to fetch content from URL: ${fetchError.message || "Unknown error"}`,
+                            },
+                            { status: 400 },
+                        );
+                    }
+                }
+
+                // Process HTML content
                 articleMarkdown = await htmlToMarkdown(
                     geminiClient,
                     body.content,
@@ -96,13 +135,36 @@ export async function POST(request: Request) {
                 ratingLabel: string;
                 sources: string[];
             };
-            const factualityData = JSON.parse(factualityDataRaw) as FactualityData;
+            const factualityData = JSON.parse(
+                factualityDataRaw,
+            ) as FactualityData;
 
             // Extract the domain from content if it's a URL
             let sourceDomain = "unknown-source.com";
             let sourceName = "Unknown Source";
 
-            if (body.isHtml) {
+            // Check for direct URL input first
+            if (body.isUrl && body.url) {
+                try {
+                    // Use the provided URL directly
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    const url = new URL(body.url);
+                    sourceDomain = url.hostname;
+                    sourceName = sourceDomain
+                        .replace(/^www\./i, "")
+                        .split(".")[0]!;
+                    // Capitalize the first letter of each word in the name
+                    sourceName = sourceName
+                        .split("-")
+                        .map(
+                            (word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1),
+                        )
+                        .join(" ");
+                } catch (e) {
+                    console.error("URL parsing error:", e);
+                }
+            } else if (body.isHtml) {
                 // Try to extract the domain from meta tags or other elements in the HTML
                 const urlMatch =
                     /<meta[^>]*property=["']og:url["'][^>]*content=["']([^"']+)["']/i.exec(
@@ -147,7 +209,9 @@ export async function POST(request: Request) {
                         category: string;
                         reasoning: string;
                     };
-                    const politicalData = JSON.parse(politicalDataRaw) as PoliticalData;
+                    const politicalData = JSON.parse(
+                        politicalDataRaw,
+                    ) as PoliticalData;
                     politicalScore = politicalData.score ?? 50;
                     politicalCategory = politicalData.category ?? "Centrist";
                     politicalReasoning = politicalData.reasoning ?? "";
@@ -162,7 +226,9 @@ export async function POST(request: Request) {
                 factuality: {
                     confidence: factualityData.rating ?? 0.75,
                     sources: factualityData.sources ?? [],
-                    rating: factualityData.ratingLabel ?? getReliabilityRating(factualityData.rating ?? 0.75),
+                    rating:
+                        factualityData.ratingLabel ??
+                        getReliabilityRating(factualityData.rating ?? 0.75),
                 },
                 source: {
                     name: sourceName,
@@ -190,7 +256,12 @@ export async function POST(request: Request) {
                 article: {
                     title: extractTitle(body.content, body.isHtml),
                     content: articleMarkdown,
-                    url: body.isHtml ? sourceDomain : undefined,
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                    url: body.isUrl
+                        ? body.url
+                        : body.isHtml
+                          ? sourceDomain
+                          : undefined,
                 },
             };
 

@@ -2,7 +2,7 @@ export interface AnalysisResults {
     factuality: {
         confidence: number;
         sources: string[];
-        rating?: string;  // Text label for the factuality rating
+        rating?: string; // Text label for the factuality rating
     };
     source: {
         name: string;

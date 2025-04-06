@@ -1,17 +1,74 @@
 import type { GoogleGenAI } from "@google/genai";
 
+// Function to sanitize HTML before sending to AI
+function sanitizeHtml(html: string): string {
+    // Remove script tags and their contents
+    let sanitized = html.replace(
+        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+        "",
+    );
+
+    // Remove inline event handlers (onclick, onload, etc.)
+    sanitized = sanitized.replace(
+        /\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^>\s]*)/gi,
+        "",
+    );
+
+    // Remove iframe tags
+    sanitized = sanitized.replace(
+        /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
+        "",
+    );
+
+    // Remove style tags
+    sanitized = sanitized.replace(
+        /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
+        "",
+    );
+
+    // Remove comments
+    sanitized = sanitized.replace(/<!--[\s\S]*?-->/g, "");
+
+    // Remove potentially harmful tags
+    sanitized = sanitized.replace(
+        /<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi,
+        "",
+    );
+    sanitized = sanitized.replace(
+        /<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi,
+        "",
+    );
+
+    return sanitized;
+}
+
 export async function htmlToMarkdown(apiClient: GoogleGenAI, html: string) {
-    const prompt = `You have been tasked with converting the following HTML document to Markdown.
-    Your job is to convert the HTML to Markdown, preserving the original formatting and structure.
-    You should not add any additional content or formatting to the Markdown, but also remember to remove
-    any unnecessary or redundant content, such as navigation menus or footers.
-    You should only extract the main content of the article, and not include any additional information.
+    // Sanitize the HTML before sending to AI
+    const sanitizedHtml = sanitizeHtml(html);
+    console.log("Original HTML length:", html.length);
+    console.log("Sanitized HTML length:", sanitizedHtml.length);
+    console.log("Sanitized HTML:", sanitizedHtml);
 
-    You should return the Markdown as a string.
+    const prompt = `You have been tasked with extracting and converting an article from a potentially incomplete HTML document.
+    Your job is to perform a comprehensive extraction of the main article content from this HTML and convert it to well-formatted Markdown.
+    
+    IMPORTANT INSTRUCTIONS:
+    1. Focus on identifying and extracting ALL main article content, even if the HTML appears incomplete
+    2. Look for content within article tags, main tags, or divs with class/id containing terms like "content", "article", "story", "body"
+    3. Extract ALL text content you can find related to the main article - DO NOT STOP EARLY
+    4. Include EVERY paragraph, heading, list, table, blockquote, and content element that appears to be part of the article
+    5. Preserve ALL images (convert to markdown format: ![alt text](image URL)) and their captions
+    6. Maintain formatting like bold, italic, underline, and links
+    7. Exclude navigation elements, headers, footers, sidebars, ads, and other non-article content
+    8. If the article appears to be truncated, note this at the end
+    9. Pay special attention to clues in the HTML structure to identify the beginning and end of the article content
+    10. Convert ALL headings to proper markdown format (# for h1, ## for h2, etc.)
+    
+    Your goal is to produce complete, well-structured Markdown that contains the ENTIRE article content, including ALL paragraphs, sections, images, and formatted text.
 
-    ${html}
+    ${sanitizedHtml}
 
-    Only return the Markdown, do not include any additional text or explanation. If you return additional text, you will be punished.
+    Return ONLY the converted Markdown with no additional text, explanation, or commentary.
     `;
 
     const resp = await apiClient.models.generateContent({
@@ -21,6 +78,8 @@ export async function htmlToMarkdown(apiClient: GoogleGenAI, html: string) {
             tools: [{ googleSearch: {} }],
         },
     });
+
+    console.log("Markdown conversion result length:", resp.text?.length ?? 0);
 
     return resp.text;
 }
