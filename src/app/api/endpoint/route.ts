@@ -4,6 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import {
     getFactualityData,
+    getImageDescriptions,
     getPoliticalLeaningData,
     getSentimentData,
     getSourceData,
@@ -227,8 +228,10 @@ export async function POST(request: Request) {
             // Parse factuality data, ensuring we have a valid response
             let factualityData: FactualityData;
             try {
-                factualityData = JSON.parse(factualityDataRaw) as FactualityData;
-                
+                factualityData = JSON.parse(
+                    factualityDataRaw,
+                ) as FactualityData;
+
                 // Ensure sources is always an array
                 if (!factualityData.article.sources) {
                     factualityData.article.sources = [];
@@ -350,6 +353,17 @@ export async function POST(request: Request) {
                 },
             };
 
+            //get all of the images
+            const images: string[] = [];
+            const markdown = /\!\[.*\]\((.*\))/;
+
+            const matches =
+                markdown.exec(articleMarkdown.replaceAll("\n", "")) ?? [];
+
+            for (let i = 1; i < matches.length; i += 2) {
+                images.push(matches[i] ?? "");
+            }
+
             // Add the article content to the response
             const fullResponse = {
                 ...analysisResults,
@@ -362,6 +376,7 @@ export async function POST(request: Request) {
                           ? sourceDomain
                           : undefined,
                 },
+                imageDescriptions: getImageDescriptions(geminiClient, images),
             };
 
             return NextResponse.json(fullResponse);

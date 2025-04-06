@@ -405,3 +405,51 @@ export async function getSourceData(
         return result?.replace(/```json/g, "").replace(/```/g, "");
     }
 }
+
+export async function getImageDescriptions(
+    geminiClient: GoogleGenAI,
+    images: string[],
+) {
+    const imageBuffers: Promise<ArrayBuffer>[] = [];
+    images.forEach(function (img: string) {
+        imageBuffers.push(
+            fetch(img).then((response) => response.arrayBuffer()),
+        );
+    });
+
+    const b64Images: string[] = [];
+    for (let i = 0; i < imageBuffers.length; i++) {
+        const buf: ArrayBuffer = (await imageBuffers[i]) ?? new ArrayBuffer();
+        b64Images.push(
+            JSON.stringify({
+                inlineData: {
+                    data: Buffer.from(buf).toString("base64"),
+                    mimeType: "image/" + (images[i] ?? ".jpeg".split(".")[-1]),
+                },
+            }),
+        );
+    }
+
+    const prompt = `You have been tasked with analysing images which come from news articles. You must look at the images, and explain what is in them.
+    please respond with an array of strings in the following format:
+    [
+        the description of the image,
+    ]
+        Only return the JSON, do not include any additional text or explanation. If you return additional text, you will be punished.
+    Do not even include \`\`\` (code blocks) in your response.`;
+
+    b64Images.push(prompt);
+
+    const response = await geminiClient.models.generateContent({
+        model: "gemini-2.0-flash-001",
+        contents: b64Images,
+    });
+
+    console.log(response);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const descriptions = JSON.parse(response.text ?? "[]");
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return descriptions;
+}
