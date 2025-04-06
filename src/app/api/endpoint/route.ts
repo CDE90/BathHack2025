@@ -151,37 +151,41 @@ export async function POST(request: Request) {
             }
 
             // Run all AI analyses in parallel for better performance
-            const [sourceDataRaw, sentimentDataRaw, factualityDataRaw, politicalDataRaw] = 
-                await Promise.all([
-                    // Get source analysis from AI using Perplexity
-                    getSourceData(
-                        geminiClient,
-                        articleContent,
-                        sourceDomain,
-                        sourceName,
-                    ),
-                    // Get sentiment analysis data
-                    getSentimentData(
-                        geminiClient,
-                        articleContent,
-                        sourceDomain,
-                        sourceName,
-                    ),
-                    // Get factuality analysis data using Perplexity
-                    getFactualityData(
-                        geminiClient,
-                        articleContent,
-                        sourceDomain,
-                        sourceName,
-                    ),
-                    // Get political leaning analysis from AI
-                    getPoliticalLeaningData(
-                        geminiClient,
-                        articleContent,
-                        sourceDomain,
-                        sourceName,
-                    )
-                ]);
+            const [
+                sourceDataRaw,
+                sentimentDataRaw,
+                factualityDataRaw,
+                politicalDataRaw,
+            ] = await Promise.all([
+                // Get source analysis from AI using Perplexity
+                getSourceData(
+                    geminiClient,
+                    articleContent,
+                    sourceDomain,
+                    sourceName,
+                ),
+                // Get sentiment analysis data
+                getSentimentData(
+                    geminiClient,
+                    articleContent,
+                    sourceDomain,
+                    sourceName,
+                ),
+                // Get factuality analysis data using Perplexity
+                getFactualityData(
+                    geminiClient,
+                    articleContent,
+                    sourceDomain,
+                    sourceName,
+                ),
+                // Get political leaning analysis from AI
+                getPoliticalLeaningData(
+                    geminiClient,
+                    articleContent,
+                    sourceDomain,
+                    sourceName,
+                ),
+            ]);
 
             // Process source data
             if (!sourceDataRaw) {
@@ -237,7 +241,7 @@ export async function POST(request: Request) {
                     ratingLabel: string;
                 };
             };
-            
+
             // Parse factuality data, ensuring we have a valid response
             let factualityData: FactualityData;
             try {
@@ -370,6 +374,13 @@ export async function POST(request: Request) {
             }
 
             // Add the article content to the response
+
+            const descriptions = await getImageDescriptions(
+                geminiClient,
+                images,
+            );
+
+            console.log("these are the :", descriptions);
             const fullResponse = {
                 ...analysisResults,
                 article: {
@@ -381,7 +392,7 @@ export async function POST(request: Request) {
                           ? sourceDomain
                           : undefined,
                 },
-                imageDescriptions: getImageDescriptions(geminiClient, images),
+                imageDescriptions: descriptions,
             };
 
             return NextResponse.json(fullResponse);
