@@ -69,8 +69,14 @@ export async function POST(request: Request) {
                 );
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const sentimentData = JSON.parse(sentimentDataRaw);
+            type SentimentData = {
+                overall_score: number;
+                entities: Array<{
+                    name: string;
+                    score: number;
+                }>;
+            };
+            const sentimentData = JSON.parse(sentimentDataRaw) as SentimentData;
 
             // Get factuality analysis data
             const factualityDataRaw = await getFactualityData(
@@ -85,8 +91,12 @@ export async function POST(request: Request) {
                 );
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const factualityData = JSON.parse(factualityDataRaw);
+            type FactualityData = {
+                rating: number;
+                ratingLabel: string;
+                sources: string[];
+            };
+            const factualityData = JSON.parse(factualityDataRaw) as FactualityData;
 
             // Extract the domain from content if it's a URL
             let sourceDomain = "unknown-source.com";
@@ -132,7 +142,12 @@ export async function POST(request: Request) {
                 );
 
                 if (politicalDataRaw) {
-                    const politicalData = JSON.parse(politicalDataRaw);
+                    type PoliticalData = {
+                        score: number;
+                        category: string;
+                        reasoning: string;
+                    };
+                    const politicalData = JSON.parse(politicalDataRaw) as PoliticalData;
                     politicalScore = politicalData.score ?? 50;
                     politicalCategory = politicalData.category ?? "Centrist";
                     politicalReasoning = politicalData.reasoning ?? "";
@@ -145,15 +160,15 @@ export async function POST(request: Request) {
             // Format the complete analysis results
             const analysisResults: AnalysisResults = {
                 factuality: {
-                    confidence: factualityData.rating || 0.75,
-                    sources: factualityData.sources || [],
-                    rating: factualityData.ratingLabel || getReliabilityRating(factualityData.rating || 0.75),
+                    confidence: factualityData.rating ?? 0.75,
+                    sources: factualityData.sources ?? [],
+                    rating: factualityData.ratingLabel ?? getReliabilityRating(factualityData.rating ?? 0.75),
                 },
                 source: {
                     name: sourceName,
                     url: sourceDomain,
                     reliability: getReliabilityRating(
-                        factualityData.rating || 0.75,
+                        factualityData.rating ?? 0.75,
                     ),
                 },
                 politicalLeaning: {
@@ -163,9 +178,9 @@ export async function POST(request: Request) {
                 },
                 sentiment: {
                     overall: {
-                        score: sentimentData.overall_score || 0,
+                        score: sentimentData.overall_score ?? 0,
                     },
-                    entities: sentimentData.entities || [],
+                    entities: sentimentData.entities ?? [],
                 },
             };
 

@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
     AlertCircle,
     Check,
@@ -153,7 +153,7 @@ export default function NewsAnalyzer() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(analysisRequest),
             });
-            const data = await response.json();
+            const data = await response.json() as ExtendedAnalysisResults;
 
             console.log(data);
 
@@ -596,10 +596,11 @@ export default function NewsAnalyzer() {
                                                 </h3>
                                                 <div className="mb-1.5 flex items-center justify-between">
                                                     <span className="text-base">
-                                                        {
-                                                            results.sentiment
-                                                                .overall.rating
-                                                        }
+                                                        {results.sentiment.overall.score > 0.2
+                                                            ? "Positive"
+                                                            : results.sentiment.overall.score < -0.2
+                                                            ? "Negative"
+                                                            : "Neutral"}
                                                     </span>
                                                     <span className="text-muted-foreground text-sm">
                                                         Score:{" "}
