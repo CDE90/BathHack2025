@@ -1,13 +1,13 @@
-import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
-import type { AnalysisResults } from "@/lib/types/AnalysisResults";
 import type { AnalysisRequest } from "@/lib/types/AnalysisRequest";
+import type { AnalysisResults } from "@/lib/types/AnalysisResults";
+import { GoogleGenAI } from "@google/genai";
+import { NextResponse } from "next/server";
 import {
-    htmlToMarkdown,
     getFactualityData,
-    getSentimentData,
     getPoliticalLeaningData,
+    getSentimentData,
     getSourceData,
+    htmlToMarkdown,
 } from "./prompting";
 
 // Initialize the Gemini API client
@@ -34,7 +34,6 @@ export async function POST(request: Request) {
                     console.log("Server-side fetching URL:", body.url);
                     try {
                         // Fetch content server-side
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                         const response = await fetch(body.url, {
                             headers: {
                                 "User-Agent":
@@ -104,7 +103,6 @@ export async function POST(request: Request) {
             if (body.isUrl && body.url) {
                 try {
                     // Use the provided URL directly
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                     const url = new URL(body.url);
                     sourceDomain = url.hostname;
                     sourceName = sourceDomain
@@ -214,18 +212,27 @@ export async function POST(request: Request) {
             }
 
             type FactualityData = {
-                rating: number;
-                ratingLabel: string;
-                sources: string[];
+                article: {
+                    rating: number;
+                    ratingLabel: string;
+                    sources: string[];
+                };
+                source: {
+                    rating: number;
+                    ratingLabel: string;
+                };
             };
             const factualityData = JSON.parse(
                 factualityDataRaw,
             ) as FactualityData;
 
             // Get political leaning analysis from AI
-            let politicalScore = 50; // Default to center
-            let politicalCategory = "Centrist";
-            let politicalReasoning = "";
+            let articlePoliticalScore = 50; // Default to center
+            let articlePoliticalCategory = "Centrist";
+            let articlePoliticalReasoning = "";
+            let sourcePoliticalScore = 50; // Default to center
+            let sourcePoliticalCategory = "Centrist";
+            let sourcePoliticalReasoning = "";
 
             try {
                 const politicalDataRaw = await getPoliticalLeaningData(
@@ -237,16 +244,34 @@ export async function POST(request: Request) {
 
                 if (politicalDataRaw) {
                     type PoliticalData = {
-                        score: number;
-                        category: string;
-                        reasoning: string;
+                        article: {
+                            score: number;
+                            category: string;
+                            reasoning: string;
+                        };
+                        source: {
+                            score: number;
+                            category: string;
+                            reasoning: string;
+                        };
                     };
                     const politicalData = JSON.parse(
                         politicalDataRaw,
                     ) as PoliticalData;
-                    politicalScore = politicalData.score ?? 50;
-                    politicalCategory = politicalData.category ?? "Centrist";
-                    politicalReasoning = politicalData.reasoning ?? "";
+
+                    // Article political data
+                    articlePoliticalScore = politicalData.article?.score ?? 50;
+                    articlePoliticalCategory =
+                        politicalData.article?.category ?? "Centrist";
+                    articlePoliticalReasoning =
+                        politicalData.article?.reasoning ?? "";
+
+                    // Source political data
+                    sourcePoliticalScore = politicalData.source?.score ?? 50;
+                    sourcePoliticalCategory =
+                        politicalData.source?.category ?? "Centrist";
+                    sourcePoliticalReasoning =
+                        politicalData.source?.reasoning ?? "";
                 }
             } catch (error) {
                 console.error("Political leaning analysis error:", error);
@@ -256,11 +281,23 @@ export async function POST(request: Request) {
             // Format the complete analysis results
             const analysisResults: AnalysisResults = {
                 factuality: {
-                    confidence: factualityData.rating ?? 0.75,
-                    sources: factualityData.sources ?? [],
-                    rating:
-                        factualityData.ratingLabel ??
-                        getReliabilityRating(factualityData.rating ?? 0.75),
+                    article: {
+                        confidence: factualityData.article?.rating ?? 0.75,
+                        sources: factualityData.article?.sources ?? [],
+                        rating:
+                            factualityData.article?.ratingLabel ??
+                            getReliabilityRating(
+                                factualityData.article?.rating ?? 0.75,
+                            ),
+                    },
+                    source: {
+                        confidence: factualityData.source?.rating ?? 0.7,
+                        rating:
+                            factualityData.source?.ratingLabel ??
+                            getReliabilityRating(
+                                factualityData.source?.rating ?? 0.7,
+                            ),
+                    },
                 },
                 source: {
                     name: sourceData.name,
@@ -271,9 +308,16 @@ export async function POST(request: Request) {
                     reasoning: sourceData.reasoning,
                 },
                 politicalLeaning: {
-                    score: politicalScore,
-                    category: politicalCategory,
-                    reasoning: politicalReasoning,
+                    article: {
+                        score: articlePoliticalScore,
+                        category: articlePoliticalCategory,
+                        reasoning: articlePoliticalReasoning,
+                    },
+                    source: {
+                        score: sourcePoliticalScore,
+                        category: sourcePoliticalCategory,
+                        reasoning: sourcePoliticalReasoning,
+                    },
                 },
                 sentiment: {
                     overall: {
@@ -289,7 +333,6 @@ export async function POST(request: Request) {
                 article: {
                     title: extractTitle(body.content, body.isHtml),
                     content: articleMarkdown,
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     url: body.isUrl
                         ? body.url
                         : body.isHtml

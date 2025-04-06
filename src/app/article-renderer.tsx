@@ -12,11 +12,13 @@ import {
 interface ArticleRendererProps {
     content: string;
     entities?: Array<{ name: string; score: number }>;
+    sourceDomain?: string;
 }
 
 export function ArticleRenderer({
     content,
     entities = [],
+    sourceDomain,
 }: ArticleRendererProps) {
     // Process the content to add sentiment links
     const processedContent = React.useMemo(() => {
@@ -49,12 +51,16 @@ export function ArticleRenderer({
 
     // Get color based on sentiment score
     function getSentimentColor(score: number): string {
-        if (score > 0.5)
-            return "bg-green-200 dark:bg-green-950 text-green-800 dark:text-green-300";
+        if (score > 0.7)
+            return "bg-green-300 dark:bg-green-950 text-green-800 dark:text-green-300";
+        if (score > 0.3)
+            return "bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-300";
         if (score > 0.1)
             return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400";
-        if (score < -0.5)
-            return "bg-red-200 dark:bg-red-950 text-red-800 dark:text-red-300";
+        if (score < -0.7)
+            return "bg-red-300 dark:bg-red-950 text-red-800 dark:text-red-300";
+        if (score < -0.3)
+            return "bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-300";
         if (score < -0.1)
             return "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
         return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
@@ -116,10 +122,25 @@ export function ArticleRenderer({
                             );
                         }
 
-                        // Regular links
+                        // Regular links - handle relative and absolute URLs
+                        let fullHref = href;
+                        
+                        // Check if it's a relative URL (starts with / but not //) and we have a source domain
+                        if (href && href.startsWith('/') && !href.startsWith('//') && sourceDomain) {
+                            // Clean domain - remove protocol if exists, and ensure no trailing slash
+                            let domain = sourceDomain;
+                            if (domain.startsWith('http://') || domain.startsWith('https://')) {
+                                domain = domain.replace(/^https?:\/\//, '');
+                            }
+                            domain = domain.replace(/\/$/, '');
+                            
+                            // Construct full URL
+                            fullHref = `https://${domain}${href}`;
+                        }
+                        
                         return (
                             <a
-                                href={href}
+                                href={fullHref}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-primary hover:text-primary/80 font-medium underline underline-offset-4"

@@ -91,10 +91,12 @@ export async function getSentimentData(
     sourceName: string,
 ) {
     const prompt = `You have been tasked with analyzing the following article for sentiment.
-    Your job is to analyse the article, and provide a sentiment score between 0 and 1.
+    Your job is to analyse the article, and provide a sentiment score between -1 and 1.
 
     You should provide a sentiment score for the entire article, as well as individual scores for any relevant entities.
-    The sentiment score should be a float between 0 and 1, with higher scores indicating more positive sentiment.
+    The sentiment score should be a float between -1 and 1, with higher scores indicating more positive sentiment.
+
+    You should analyse the sentiment of the article and any entities based solely on the perspective of the author, or any other relevant information provided in the article.
 
     You should return the data in the following json format:
     {
@@ -147,8 +149,8 @@ export async function getFactualityData(
     sourceUrl: string,
     sourceName: string,
 ) {
-    const prompt = `You have been tasked with analyzing the following article for factuality.
-    Your job is to analyze the article and provide a factuality assessment.
+    const prompt = `You have been tasked with analyzing the following article and its source for factuality.
+    Your job is to provide SEPARATE factuality assessments for both the article content itself AND the publishing source.
 
     Please examine the article for:
     1. Verifiable claims and statements
@@ -157,15 +159,29 @@ export async function getFactualityData(
     4. Presence of misleading or incorrect information
     5. Use of reliable primary sources
 
+    Then examine the source (${sourceName} - ${sourceUrl}) for:
+    1. Overall reputation for factual reporting
+    2. History of corrections or retractions
+    3. Transparency about ownership and funding
+    4. Use of reliable primary sources in general reporting
+    5. Editorial standards and fact-checking processes
+
     You should return the data in the following json format:
     {
-        "rating": a number between 0 and 1 representing the factuality score, with higher values indicating more factual content,
-        "ratingLabel": a text label representing the rating (choose one from: "Very Factual", "Mostly Factual", "Mixed Factuality", "Somewhat Unfactual", "Not Factual"),
-        "sources": an array of URLs or citations that support the factual claims in the article - find at least 3-5 sources if possible
+        "article": {
+            "rating": a number between 0 and 1 representing the article's factuality score, with higher values indicating more factual content,
+            "ratingLabel": a text label representing the article's rating (choose one from: "Very Factual", "Mostly Factual", "Mixed Factuality", "Somewhat Unfactual", "Not Factual"),
+            "sources": an array of URLs or citations that support the factual claims in the article - find at least 3-5 sources if possible
+        },
+        "source": {
+            "rating": a number between 0 and 1 representing the source's general factuality score, with higher values indicating more factual reporting overall,
+            "ratingLabel": a text label representing the source's rating (choose one from: "Very Factual", "Mostly Factual", "Mixed Factuality", "Somewhat Unfactual", "Not Factual")
+        }
     }
 
-    Please use search capabilities to find reliable sources for the article. These should be from a variety of sources, including academic journals, news outlets, and reputable news organizations.
-    Avoid using the source URL as a source, as it may not be reliable.
+    Please use search capabilities to find reliable sources for validating both the article and the source's reputation. These should be from a variety of sources, including academic journals, news outlets, and reputable news organizations.
+    Avoid using the source URL itself as a source for validation, as that would be circular reasoning.
+    For each source cited, please include the full URL of the source page, not just the domain.
 
     Predicted source name: ${sourceName}
     Predicted source URL: ${sourceUrl}
@@ -195,20 +211,24 @@ export async function getPoliticalLeaningData(
     sourceUrl: string,
     sourceName: string,
 ) {
-    const prompt = `You have been tasked with analyzing the following article for political leaning.
-    Your job is to carefully and objectively analyze the article's content, language, framing of issues, 
-    and overall perspective to determine its position on the political spectrum.
+    const prompt = `You have been tasked with analyzing the following article AND its source for political leaning.
+    Your job is to carefully and objectively analyze BOTH the article's content AND the source publication's overall political orientation.
 
-    Please analyze the article for:
+    For the ARTICLE, please analyze:
     1. Word choice and framing that indicates political perspective
     2. Which issues are emphasized and how they are presented
     3. Treatment of different political groups, policies, or figures
     4. Overall narrative and perspective on political matters
     5. Any explicit or implicit bias toward particular ideologies
 
-    Please also highlight any specific words or phrases that are emotionally charged or inflammatory, and explain why you chose to include them in your analysis.
+    For the SOURCE (${sourceName}), please research and analyze:
+    1. Overall editorial stance and history
+    2. Ownership structure and funding sources
+    3. How the outlet portrays different political groups in general
+    4. Previous political endorsements or positions
+    5. General reputation for political orientation
 
-    Please provide a political leaning score on a scale from 0 to 100, where:
+    Please provide SEPARATE political leaning scores for BOTH the article and the source on a scale from 0 to 100, where:
     - 0-20: Far Left (strongly progressive/socialist perspective)
     - 21-40: Center-Left (liberal/progressive perspective)
     - 41-60: Centrist (balanced perspective with minimal bias)
@@ -217,9 +237,16 @@ export async function getPoliticalLeaningData(
 
     Return your analysis in the following JSON format:
     {
-        "score": a number between 0 and 100 indicating the political leaning,
-        "category": one of ["Far Left", "Center-Left", "Centrist", "Center-Right", "Far Right"],
-        "reasoning": a brief explanation of why you assigned this score, highlighting key indicators in the text
+        "article": {
+            "score": a number between 0 and 100 indicating the article's political leaning,
+            "category": one of ["Far Left", "Center-Left", "Centrist", "Center-Right", "Far Right"],
+            "reasoning": a brief explanation of why you assigned this score, highlighting key indicators in the article text
+        },
+        "source": {
+            "score": a number between 0 and 100 indicating the source's general political leaning,
+            "category": one of ["Far Left", "Center-Left", "Centrist", "Center-Right", "Far Right"],
+            "reasoning": a brief explanation of why you assigned this score, highlighting key indicators from your research
+        }
     }
 
     Predicted source name: ${sourceName}

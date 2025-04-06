@@ -111,7 +111,7 @@ export default function NewsAnalyzer() {
         <main className="container mx-auto max-w-6xl space-y-6 px-4 py-6">
             <header className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
                 <h1 className="text-4xl font-bold tracking-tight">
-                    News Article Analyzer
+                    News Article Analyzer <span className="text-lg font-normal text-muted-foreground">with Source Assessment</span>
                 </h1>
 
                 <div className="flex items-center">
@@ -133,7 +133,7 @@ export default function NewsAnalyzer() {
                         <CardTitle>Enter News Article</CardTitle>
                         <CardDescription>
                             Paste a URL or the full text of a news article to
-                            analyze its factuality, bias, and sentiment.
+                            analyze its factuality, bias, political leaning, and sentiment.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -209,8 +209,8 @@ export default function NewsAnalyzer() {
                     </CardContent>
                     <CardFooter className="text-muted-foreground text-xs">
                         This tool analyzes news articles for factuality,
-                        political bias, and sentiment. Results are provided for
-                        educational purposes.
+                        political bias, source credibility, and sentiment.
+                        Results are provided for educational purposes.
                     </CardFooter>
                 </Card>
 
@@ -290,37 +290,70 @@ export default function NewsAnalyzer() {
                                         </CardHeader>
                                         <CardContent className="pt-4">
                                             <div className="flex flex-col gap-4">
-                                                <span className="text-xl font-semibold">
-                                                    {results.factuality.rating}
-                                                </span>
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <span>Confidence</span>
-                                                        <span className="font-medium">
-                                                            {results.factuality
-                                                                .confidence *
-                                                                100}
-                                                            %
-                                                        </span>
+                                                {/* Article Factuality */}
+                                                <div className="space-y-3">
+                                                    <h3 className="text-base font-medium">Article:</h3>
+                                                    <span className="text-lg font-semibold">
+                                                        {results.factuality.article.rating}
+                                                    </span>
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span>Confidence</span>
+                                                            <span className="font-medium">
+                                                                {Math.round(
+                                                                    results.factuality
+                                                                        .article.confidence *
+                                                                    100
+                                                                )}%
+                                                            </span>
+                                                        </div>
+                                                        <Progress
+                                                            value={
+                                                                results.factuality
+                                                                    .article.confidence *
+                                                                100
+                                                            }
+                                                            className="h-2"
+                                                        />
                                                     </div>
-                                                    <Progress
-                                                        value={
-                                                            results.factuality
-                                                                .confidence *
-                                                            100
-                                                        }
-                                                        className="h-2"
-                                                    />
                                                 </div>
-                                                {results.factuality.sources &&
-                                                    results.factuality.sources
-                                                        .length > 0 && (
-                                                        <div className="mt-2">
+
+                                                {/* Source Factuality */}
+                                                <div className="pt-2 space-y-3 border-t">
+                                                    <h3 className="text-base font-medium">Source:</h3>
+                                                    <span className="text-lg font-semibold">
+                                                        {results.factuality.source.rating}
+                                                    </span>
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span>Confidence</span>
+                                                            <span className="font-medium">
+                                                                {Math.round(
+                                                                    results.factuality
+                                                                        .source.confidence *
+                                                                    100
+                                                                )}%
+                                                            </span>
+                                                        </div>
+                                                        <Progress
+                                                            value={
+                                                                results.factuality
+                                                                    .source.confidence *
+                                                                100
+                                                            }
+                                                            className="h-2"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {results.factuality.article.sources &&
+                                                    results.factuality.article.sources.length > 0 && (
+                                                        <div className="mt-2 pt-2 border-t">
                                                             <h4 className="mb-1 text-sm font-medium">
-                                                                Sources:
+                                                                Supporting Sources:
                                                             </h4>
                                                             <ul className="text-muted-foreground space-y-1 text-xs">
-                                                                {results.factuality.sources.map(
+                                                                {results.factuality.article.sources.map(
                                                                     (
                                                                         source,
                                                                         index,
@@ -540,6 +573,13 @@ export default function NewsAnalyzer() {
                                                         ></div>
                                                     </div>
                                                 </div>
+                                                
+                                                {results.source.reasoning && (
+                                                    <div className="border-t pt-3 mt-4">
+                                                        <h4 className="text-muted-foreground text-sm font-medium mb-1">Source Analysis:</h4>
+                                                        <p className="text-muted-foreground text-xs">{results.source.reasoning}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -556,59 +596,120 @@ export default function NewsAnalyzer() {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="pt-4">
-                                        <div className="space-y-4">
-                                            <div className="text-xl font-semibold">
-                                                {results.politicalLeaning
-                                                    .category ??
-                                                    (results.politicalLeaning
-                                                        .score < 21
-                                                        ? "Far Left"
-                                                        : results
-                                                                .politicalLeaning
-                                                                .score < 41
-                                                          ? "Center-Left"
-                                                          : results
-                                                                  .politicalLeaning
-                                                                  .score < 61
-                                                            ? "Centrist"
+                                        <div className="space-y-6">
+                                            {/* Article Political Leaning */}
+                                            <div className="space-y-4">
+                                                <h3 className="text-base font-medium">Article:</h3>
+                                                <div className="text-xl font-semibold">
+                                                    {results.politicalLeaning.article
+                                                        .category ??
+                                                        (results.politicalLeaning.article
+                                                            .score < 21
+                                                            ? "Far Left"
                                                             : results
-                                                                    .politicalLeaning
-                                                                    .score < 81
-                                                              ? "Center-Right"
-                                                              : "Far Right")}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="text-muted-foreground flex justify-between text-xs">
-                                                    <span>Left</span>
-                                                    <span>Center</span>
-                                                    <span>Right</span>
+                                                                    .politicalLeaning.article
+                                                                    .score < 41
+                                                              ? "Center-Left"
+                                                              : results
+                                                                      .politicalLeaning.article
+                                                                      .score < 61
+                                                                ? "Centrist"
+                                                                : results
+                                                                        .politicalLeaning.article
+                                                                        .score < 81
+                                                                  ? "Center-Right"
+                                                                  : "Far Right")}
                                                 </div>
-                                                <div className="bg-muted relative h-3 rounded-full">
-                                                    <div
-                                                        className="bg-primary absolute top-0 h-3 w-1 -translate-x-1/2 transform rounded-full"
-                                                        style={{
-                                                            left: `${results.politicalLeaning.score}%`,
-                                                        }}
-                                                    ></div>
-                                                    <div className="bg-border absolute top-0 left-1/2 h-3 w-[1px]"></div>
+                                                <div className="space-y-1">
+                                                    <div className="text-muted-foreground flex justify-between text-xs">
+                                                        <span>Left</span>
+                                                        <span>Center</span>
+                                                        <span>Right</span>
+                                                    </div>
+                                                    <div className="bg-muted relative h-3 rounded-full">
+                                                        <div
+                                                            className="bg-primary absolute top-0 h-3 w-1 -translate-x-1/2 transform rounded-full"
+                                                            style={{
+                                                                left: `${results.politicalLeaning.article.score}%`,
+                                                            }}
+                                                        ></div>
+                                                        <div className="bg-border absolute top-0 left-1/2 h-3 w-[1px]"></div>
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {results.politicalLeaning
-                                                .reasoning && (
-                                                <div className="text-muted-foreground mt-4 text-sm">
-                                                    <h4 className="mb-1 font-medium">
-                                                        Analysis:
-                                                    </h4>
-                                                    <p>
-                                                        {
-                                                            results
-                                                                .politicalLeaning
-                                                                .reasoning
-                                                        }
-                                                    </p>
+                                                {results.politicalLeaning.article
+                                                    .reasoning && (
+                                                    <div className="text-muted-foreground mt-2 text-sm">
+                                                        <h4 className="mb-1 font-medium">
+                                                            Analysis:
+                                                        </h4>
+                                                        <p>
+                                                            {
+                                                                results
+                                                                    .politicalLeaning.article
+                                                                    .reasoning
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Source Political Leaning */}
+                                            <div className="pt-4 border-t space-y-4">
+                                                <h3 className="text-base font-medium">Source:</h3>
+                                                <div className="text-xl font-semibold">
+                                                    {results.politicalLeaning.source
+                                                        .category ??
+                                                        (results.politicalLeaning.source
+                                                            .score < 21
+                                                            ? "Far Left"
+                                                            : results
+                                                                    .politicalLeaning.source
+                                                                    .score < 41
+                                                              ? "Center-Left"
+                                                              : results
+                                                                      .politicalLeaning.source
+                                                                      .score < 61
+                                                                ? "Centrist"
+                                                                : results
+                                                                        .politicalLeaning.source
+                                                                        .score < 81
+                                                                  ? "Center-Right"
+                                                                  : "Far Right")}
                                                 </div>
-                                            )}
+                                                <div className="space-y-1">
+                                                    <div className="text-muted-foreground flex justify-between text-xs">
+                                                        <span>Left</span>
+                                                        <span>Center</span>
+                                                        <span>Right</span>
+                                                    </div>
+                                                    <div className="bg-muted relative h-3 rounded-full">
+                                                        <div
+                                                            className="bg-primary absolute top-0 h-3 w-1 -translate-x-1/2 transform rounded-full"
+                                                            style={{
+                                                                left: `${results.politicalLeaning.source.score}%`,
+                                                            }}
+                                                        ></div>
+                                                        <div className="bg-border absolute top-0 left-1/2 h-3 w-[1px]"></div>
+                                                    </div>
+                                                </div>
+
+                                                {results.politicalLeaning.source
+                                                    .reasoning && (
+                                                    <div className="text-muted-foreground mt-2 text-sm">
+                                                        <h4 className="mb-1 font-medium">
+                                                            Analysis:
+                                                        </h4>
+                                                        <p>
+                                                            {
+                                                                results
+                                                                    .politicalLeaning.source
+                                                                    .reasoning
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -616,9 +717,12 @@ export default function NewsAnalyzer() {
                                 {/* Sentiment Analysis Section */}
                                 <Card className="overflow-hidden">
                                     <CardHeader className="bg-muted/30 pb-2">
-                                        <CardTitle className="text-base">
-                                            Sentiment Analysis
-                                        </CardTitle>
+                                        <div className="flex items-center">
+                                            <AlertCircle className="mr-2 h-5 w-5 text-yellow-500" />
+                                            <CardTitle className="text-base">
+                                                Sentiment Analysis
+                                            </CardTitle>
+                                        </div>
                                     </CardHeader>
                                     <CardContent className="pt-4">
                                         <div className="space-y-6">
@@ -705,7 +809,7 @@ export default function NewsAnalyzer() {
 
                                                                     {/* Entity sentiment indicator */}
                                                                     <div
-                                                                        className={`absolute h-full rounded-full ${entity.score > 0 ? "bg-green-500" : "bg-red-500"}`}
+                                                                        className={`absolute h-full rounded-full ${entity.score > 0.2 ? "bg-green-500" : entity.score < -0.2 ? "bg-red-500" : "bg-gray-500"}`}
                                                                         style={{
                                                                             width: "20%", // Constant width of 0.2 units
                                                                             left: `${(entity.score + 1) * 50 - 10}%`, // Center on score (-1 to 1 scale mapped to 0-100%)
@@ -739,6 +843,7 @@ export default function NewsAnalyzer() {
                                                 entities={
                                                     results.sentiment.entities
                                                 }
+                                                sourceDomain={results.source.url}
                                             />
                                         ) : (
                                             <p className="text-muted-foreground">
