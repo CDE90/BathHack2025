@@ -445,10 +445,12 @@ export async function getImageDescriptions(
         contents: b64Images,
     });
 
-    console.log(response);
+    console.log("images:", response);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const descriptions = JSON.parse(response.text ?? "[]");
+    const descriptions = JSON.parse(
+        (response.text ?? "[]")?.replace(/```json/g, "").replace(/```/g, ""),
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return descriptions;
