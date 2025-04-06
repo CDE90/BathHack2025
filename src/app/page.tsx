@@ -112,7 +112,7 @@ export default function NewsAnalyzer() {
         <main className="container mx-auto max-w-6xl space-y-6 px-4 py-6">
             <header className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
                 <h1 className="text-4xl font-bold tracking-tight">
-                    News Article Analyzer <span className="text-lg font-normal text-muted-foreground">with Source Assessment</span>
+                    The Credibility Compass <span className="text-lg font-normal text-muted-foreground">News Evaluation Tool</span>
                 </h1>
 
                 <div className="flex items-center gap-3">
@@ -132,10 +132,10 @@ export default function NewsAnalyzer() {
                 {/* Input Section */}
                 <Card className="h-fit lg:col-span-1">
                     <CardHeader>
-                        <CardTitle>Enter News Article</CardTitle>
+                        <CardTitle>Navigate the News</CardTitle>
                         <CardDescription>
-                            Paste a URL or the full text of a news article to
-                            analyze its factuality, bias, political leaning, and sentiment.
+                            Paste a URL or the full text of a news article to evaluate 
+                            its credibility, factual accuracy, bias, and political orientation.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -201,17 +201,17 @@ export default function NewsAnalyzer() {
                                 {isLoading ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Analyzing...
+                                        Evaluating...
                                     </>
                                 ) : (
-                                    "Analyze Article"
+                                    "Evaluate Article"
                                 )}
                             </Button>
                         </form>
                     </CardContent>
                     <CardFooter className="text-muted-foreground text-xs">
-                        This tool analyzes news articles for factuality,
-                        political bias, source credibility, and sentiment.
+                        The Credibility Compass evaluates news articles for factual accuracy,
+                        political leaning, source credibility, and sentiment.
                         Results are provided for educational purposes.
                     </CardFooter>
                 </Card>
@@ -224,7 +224,7 @@ export default function NewsAnalyzer() {
                                 <Loader2 className="text-primary mx-auto h-10 w-10 animate-spin" />
                                 <div className="space-y-2">
                                     <p className="text-lg">
-                                        Analyzing article content...
+                                        Evaluating article credibility...
                                     </p>
                                     <p className="text-muted-foreground text-sm">
                                         This may take a few moments

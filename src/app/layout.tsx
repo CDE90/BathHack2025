@@ -7,8 +7,8 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "News Article Analyzer",
-    description: "Analyze news articles for factuality, bias, and sentiment",
+    title: "The Credibility Compass",
+    description: "Evaluate news articles for factuality, bias, and credibility",
 };
 
 export default function RootLayout({
