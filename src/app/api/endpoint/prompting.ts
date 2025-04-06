@@ -67,5 +67,5 @@ export async function getSentimentData(
         },
     });
 
-    return resp.text;
+    return resp.text ?? "{}";
 }

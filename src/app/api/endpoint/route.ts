@@ -3,14 +3,14 @@ import { OpenAI } from "openai";
 import { GoogleGenAI } from "@google/genai";
 import type { AnalysisResults } from "@/lib/types/AnalysisResults";
 import type { AnalysisRequest } from "@/lib/types/AnalysisRequest";
-import { htmlToMarkdown } from "./prompting";
+import { htmlToMarkdown, getSentimentData } from "./prompting";
 
 const client = new OpenAI({
     apiKey: process.env.OPENAIKEY,
 });
 
 const geminiClient = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY,
+    apiKey: process.env.GeMiNi_kEy_ApI,
 });
 
 const factualityPrompt = `please search for similar articles,
@@ -90,6 +90,11 @@ export async function POST(request: Request) {
                 ],
             },
         };
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        response.sentiment = JSON.parse(
+            await getSentimentData(geminiClient, articleBody),
+        );
 
         return NextResponse.json(response);
     } catch (error) {
