@@ -87,6 +87,8 @@ export async function htmlToMarkdown(apiClient: GoogleGenAI, html: string) {
 export async function getSentimentData(
     apiClient: GoogleGenAI,
     article: string,
+    sourceUrl: string,
+    sourceName: string,
 ) {
     const prompt = `You have been tasked with analyzing the following article for sentiment.
     Your job is to analyse the article, and provide a sentiment score between 0 and 1.
@@ -117,6 +119,9 @@ export async function getSentimentData(
         ]
     }
 
+    Predicted source name: ${sourceName}
+    Predicted source URL: ${sourceUrl}
+
     ${article}
 
     Only return the JSON, do not include any additional text or explanation. If you return additional text, you will be punished.
@@ -139,6 +144,8 @@ export async function getSentimentData(
 export async function getFactualityData(
     apiClient: GoogleGenAI,
     article: string,
+    sourceUrl: string,
+    sourceName: string,
 ) {
     const prompt = `You have been tasked with analyzing the following article for factuality.
     Your job is to analyze the article and provide a factuality assessment.
@@ -156,6 +163,12 @@ export async function getFactualityData(
         "ratingLabel": a text label representing the rating (choose one from: "Very Factual", "Mostly Factual", "Mixed Factuality", "Somewhat Unfactual", "Not Factual"),
         "sources": an array of URLs or citations that support the factual claims in the article - find at least 3-5 sources if possible
     }
+
+    Please use search capabilities to find reliable sources for the article. These should be from a variety of sources, including academic journals, news outlets, and reputable news organizations.
+    Avoid using the source URL as a source, as it may not be reliable.
+
+    Predicted source name: ${sourceName}
+    Predicted source URL: ${sourceUrl}
 
     ${article}
 
@@ -179,6 +192,8 @@ export async function getFactualityData(
 export async function getPoliticalLeaningData(
     apiClient: GoogleGenAI,
     article: string,
+    sourceUrl: string,
+    sourceName: string,
 ) {
     const prompt = `You have been tasked with analyzing the following article for political leaning.
     Your job is to carefully and objectively analyze the article's content, language, framing of issues, 
@@ -190,6 +205,8 @@ export async function getPoliticalLeaningData(
     3. Treatment of different political groups, policies, or figures
     4. Overall narrative and perspective on political matters
     5. Any explicit or implicit bias toward particular ideologies
+
+    Please also highlight any specific words or phrases that are emotionally charged or inflammatory, and explain why you chose to include them in your analysis.
 
     Please provide a political leaning score on a scale from 0 to 100, where:
     - 0-20: Far Left (strongly progressive/socialist perspective)
@@ -204,6 +221,9 @@ export async function getPoliticalLeaningData(
         "category": one of ["Far Left", "Center-Left", "Centrist", "Center-Right", "Far Right"],
         "reasoning": a brief explanation of why you assigned this score, highlighting key indicators in the text
     }
+
+    Predicted source name: ${sourceName}
+    Predicted source URL: ${sourceUrl}
 
     ${article}
 
@@ -220,6 +240,47 @@ export async function getPoliticalLeaningData(
     });
 
     console.log("Political leaning data:", resp.text);
+
+    return resp.text?.replace(/```json/g, "").replace(/```/g, "");
+}
+
+export async function getSourceData(
+    apiClient: GoogleGenAI,
+    article: string,
+    sourceUrl: string,
+    sourceName: string,
+) {
+    const prompt = `You have been tasked with extracting and analyzing the following article's source.
+    Using the internet to assist you, please provide a comprehensive analysis of the source's credibility, reliability, and bias.
+
+    Please provide a source analysis in the following JSON format:
+    {
+        "name": the name of the source,
+        "url": the URL of the source,
+        "reliability": a text label indicating the reliability of the source (choose one from: "Very Reliable", "Reliable", "Mostly Reliable", "Mixed Reliability", "Somewhat Unreliable", "Unreliable"),
+        "bias": a text label indicating the bias of the source (choose one from: "None", "Biased", "Unbiased"),
+        "credibility": a number between 0 and 1 indicating the credibility of the source, with higher values indicating more credible sources,
+        "reasoning": a brief explanation of why you assigned this score, highlighting key indicators in the text
+    }
+
+    ${article}
+
+    Predicted source name: ${sourceName}
+    Predicted source URL: ${sourceUrl}
+
+    Only return the JSON, do not include any additional text or explanation. If you return additional text, you will be punished.
+    Do not even include \`\`\` (code blocks) in your response.
+    `;
+
+    const resp = await apiClient.models.generateContent({
+        model: "gemini-2.0-flash-001",
+        contents: prompt,
+        config: {
+            tools: [{ googleSearch: {} }],
+        },
+    });
+
+    console.log("Source data:", resp.text);
 
     return resp.text?.replace(/```json/g, "").replace(/```/g, "");
 }

@@ -8,6 +8,9 @@ export interface AnalysisResults {
         name: string;
         url: string;
         reliability: string;
+        bias: string;
+        credibility: number;
+        reasoning: string;
     };
     politicalLeaning: {
         score: number;

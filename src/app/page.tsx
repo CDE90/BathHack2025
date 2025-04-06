@@ -380,22 +380,165 @@ export default function NewsAnalyzer() {
                                             </div>
                                         </CardHeader>
                                         <CardContent className="pt-4">
-                                            <div className="flex flex-col gap-4">
-                                                <div>
-                                                    <span className="text-xl font-semibold">
-                                                        {results.source.name}
-                                                    </span>
-                                                    <div className="text-muted-foreground text-sm">
-                                                        {results.source.url}
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium">
+                                                            Name:
+                                                        </span>
+                                                        <span className="text-sm">
+                                                            {
+                                                                results.source
+                                                                    .name
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium">
+                                                            URL:
+                                                        </span>
+                                                        <a
+                                                            href={
+                                                                inputType ===
+                                                                "url"
+                                                                    ? inputValue
+                                                                    : results
+                                                                          .source
+                                                                          .url
+                                                            }
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-sm hover:underline"
+                                                        >
+                                                            {
+                                                                new URL(
+                                                                    inputType ===
+                                                                    "url"
+                                                                        ? inputValue
+                                                                        : results.source.url.startsWith(
+                                                                                "http",
+                                                                            )
+                                                                          ? results
+                                                                                .source
+                                                                                .url
+                                                                          : inputValue,
+                                                                ).hostname
+                                                            }
+                                                        </a>
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                                                        {
-                                                            results.source
-                                                                .reliability
-                                                        }
-                                                    </span>
+
+                                                {/* Reliability Section */}
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium">
+                                                            Reliability:
+                                                        </span>
+                                                        <span
+                                                            className={`flex items-center justify-center gap-1 rounded-sm p-1 text-sm ${
+                                                                results.source
+                                                                    .reliability ===
+                                                                "Very Reliable"
+                                                                    ? "bg-green-500"
+                                                                    : results
+                                                                            .source
+                                                                            .reliability ===
+                                                                        "Reliable"
+                                                                      ? "bg-green-500"
+                                                                      : results
+                                                                              .source
+                                                                              .reliability ===
+                                                                          "Mostly Reliable"
+                                                                        ? "bg-green-500"
+                                                                        : results
+                                                                                .source
+                                                                                .reliability ===
+                                                                            "Mixed Reliability"
+                                                                          ? "bg-yellow-500"
+                                                                          : results
+                                                                                  .source
+                                                                                  .reliability ===
+                                                                              "Somewhat Unreliable"
+                                                                            ? "bg-yellow-500"
+                                                                            : results
+                                                                                    .source
+                                                                                    .reliability ===
+                                                                                "Unreliable"
+                                                                              ? "bg-red-500"
+                                                                              : "bg-gray-500"
+                                                            }`}
+                                                        >
+                                                            {
+                                                                results.source
+                                                                    .reliability
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium">
+                                                            Bias:
+                                                        </span>
+                                                        <span
+                                                            className={`flex items-center justify-center gap-1 rounded-sm p-1 text-sm ${
+                                                                results.source
+                                                                    .bias ===
+                                                                "None"
+                                                                    ? "bg-green-500"
+                                                                    : results
+                                                                            .source
+                                                                            .bias ===
+                                                                        "Biased"
+                                                                      ? "bg-red-500"
+                                                                      : "bg-gray-500"
+                                                            }`}
+                                                        >
+                                                            {
+                                                                results.source
+                                                                    .bias
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Credibility Section */}
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium">
+                                                            Credibility:
+                                                        </span>
+                                                        <span className="text-sm">
+                                                            {results.source.credibility.toFixed(
+                                                                2,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <div className="bg-muted relative h-2 w-full overflow-hidden rounded-full">
+                                                        {/* Center line */}
+                                                        <div className="absolute left-1/2 h-full w-0.5 -translate-x-1/2 transform bg-gray-300 dark:bg-gray-700"></div>
+
+                                                        {/* Credibility indicator */}
+                                                        <div
+                                                            className={`absolute h-full rounded-full ${
+                                                                results.source
+                                                                    .credibility >
+                                                                0.5
+                                                                    ? "bg-green-500"
+                                                                    : results
+                                                                            .source
+                                                                            .credibility >
+                                                                        0.25
+                                                                      ? "bg-yellow-500"
+                                                                      : "bg-red-500"
+                                                            }`}
+                                                            style={{
+                                                                width: "20%", // Constant width of 0.2 units
+                                                                left: `${results.source.credibility * 100 - 10}%`, // Center on score (-1 to 1 scale mapped to 0-100%)
+                                                            }}
+                                                        ></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </CardContent>

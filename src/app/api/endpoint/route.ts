@@ -7,6 +7,7 @@ import {
     getFactualityData,
     getSentimentData,
     getPoliticalLeaningData,
+    getSourceData,
 } from "./prompting";
 
 // Initialize the Gemini API client
@@ -95,50 +96,6 @@ export async function POST(request: Request) {
         console.log("Article content:", articleContent);
 
         try {
-            // Get sentiment analysis data
-            const sentimentDataRaw = await getSentimentData(
-                geminiClient,
-                articleContent,
-            );
-
-            if (!sentimentDataRaw) {
-                return NextResponse.json(
-                    { error: "Failed to analyze sentiment" },
-                    { status: 500 },
-                );
-            }
-
-            type SentimentData = {
-                overall_score: number;
-                entities: Array<{
-                    name: string;
-                    score: number;
-                }>;
-            };
-            const sentimentData = JSON.parse(sentimentDataRaw) as SentimentData;
-
-            // Get factuality analysis data
-            const factualityDataRaw = await getFactualityData(
-                geminiClient,
-                articleContent,
-            );
-
-            if (!factualityDataRaw) {
-                return NextResponse.json(
-                    { error: "Failed to analyze factuality" },
-                    { status: 500 },
-                );
-            }
-
-            type FactualityData = {
-                rating: number;
-                ratingLabel: string;
-                sources: string[];
-            };
-            const factualityData = JSON.parse(
-                factualityDataRaw,
-            ) as FactualityData;
-
             // Extract the domain from content if it's a URL
             let sourceDomain = "unknown-source.com";
             let sourceName = "Unknown Source";
@@ -192,6 +149,79 @@ export async function POST(request: Request) {
                 }
             }
 
+            // Get source analysis from AI
+            const sourceDataRaw = await getSourceData(
+                geminiClient,
+                articleContent,
+                sourceDomain,
+                sourceName,
+            );
+
+            if (!sourceDataRaw) {
+                return NextResponse.json(
+                    { error: "Failed to analyze source" },
+                    { status: 500 },
+                );
+            }
+
+            type SourceData = {
+                name: string;
+                url: string;
+                reliability: string;
+                bias: string;
+                credibility: number;
+                reasoning: string;
+            };
+            const sourceData = JSON.parse(sourceDataRaw) as SourceData;
+
+            // Get sentiment analysis data
+            const sentimentDataRaw = await getSentimentData(
+                geminiClient,
+                articleContent,
+                sourceData.url,
+                sourceData.name,
+            );
+
+            if (!sentimentDataRaw) {
+                return NextResponse.json(
+                    { error: "Failed to analyze sentiment" },
+                    { status: 500 },
+                );
+            }
+
+            type SentimentData = {
+                overall_score: number;
+                entities: Array<{
+                    name: string;
+                    score: number;
+                }>;
+            };
+            const sentimentData = JSON.parse(sentimentDataRaw) as SentimentData;
+
+            // Get factuality analysis data
+            const factualityDataRaw = await getFactualityData(
+                geminiClient,
+                articleContent,
+                sourceData.url,
+                sourceData.name,
+            );
+
+            if (!factualityDataRaw) {
+                return NextResponse.json(
+                    { error: "Failed to analyze factuality" },
+                    { status: 500 },
+                );
+            }
+
+            type FactualityData = {
+                rating: number;
+                ratingLabel: string;
+                sources: string[];
+            };
+            const factualityData = JSON.parse(
+                factualityDataRaw,
+            ) as FactualityData;
+
             // Get political leaning analysis from AI
             let politicalScore = 50; // Default to center
             let politicalCategory = "Centrist";
@@ -201,6 +231,8 @@ export async function POST(request: Request) {
                 const politicalDataRaw = await getPoliticalLeaningData(
                     geminiClient,
                     articleContent,
+                    sourceData.url,
+                    sourceData.name,
                 );
 
                 if (politicalDataRaw) {
@@ -231,11 +263,12 @@ export async function POST(request: Request) {
                         getReliabilityRating(factualityData.rating ?? 0.75),
                 },
                 source: {
-                    name: sourceName,
-                    url: sourceDomain,
-                    reliability: getReliabilityRating(
-                        factualityData.rating ?? 0.75,
-                    ),
+                    name: sourceData.name,
+                    url: sourceData.url,
+                    reliability: sourceData.reliability,
+                    bias: sourceData.bias,
+                    credibility: sourceData.credibility,
+                    reasoning: sourceData.reasoning,
                 },
                 politicalLeaning: {
                     score: politicalScore,
