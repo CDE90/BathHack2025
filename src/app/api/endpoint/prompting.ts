@@ -1,4 +1,11 @@
 import type { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
+
+// Initialize the Perplexity API client for search-based tasks
+const perplexityClient = new OpenAI({
+    apiKey: process.env.PERPLEXITY_API_KEY,
+    baseURL: "https://api.perplexity.ai",
+});
 
 // Function to sanitize HTML before sending to AI
 function sanitizeHtml(html: string): string {
@@ -47,7 +54,6 @@ export async function htmlToMarkdown(apiClient: GoogleGenAI, html: string) {
     const sanitizedHtml = sanitizeHtml(html);
     console.log("Original HTML length:", html.length);
     console.log("Sanitized HTML length:", sanitizedHtml.length);
-    console.log("Sanitized HTML:", sanitizedHtml);
 
     const prompt = `You have been tasked with extracting and converting an article from a potentially incomplete HTML document.
     Your job is to perform a comprehensive extraction of the main article content from this HTML and convert it to well-formatted Markdown.
@@ -81,7 +87,7 @@ export async function htmlToMarkdown(apiClient: GoogleGenAI, html: string) {
 
     console.log("Markdown conversion result length:", resp.text?.length ?? 0);
 
-    return resp.text;
+    return resp.text?.replace(/```md/g, "").replace(/```/g, "");
 }
 
 export async function getSentimentData(
@@ -130,12 +136,10 @@ export async function getSentimentData(
     Do not even include \`\`\` (code blocks) in your response.
     `;
 
+    // We'll continue using Gemini for sentiment analysis since it doesn't require web search
     const resp = await apiClient.models.generateContent({
-        model: "gemini-2.0-flash-001",
+        model: "gemini-2.0-flash",
         contents: prompt,
-        config: {
-            tools: [{ googleSearch: {} }],
-        },
     });
 
     console.log("Sentiment data:", resp.text);
@@ -192,17 +196,48 @@ export async function getFactualityData(
     Do not even include \`\`\` (code blocks) in your response.
     `;
 
-    const resp = await apiClient.models.generateContent({
-        model: "gemini-2.0-flash-001",
-        contents: prompt,
-        config: {
-            tools: [{ googleSearch: {} }],
+    // Use Perplexity API for factuality data (requires search capabilities)
+    const response = await perplexityClient.chat.completions.create({
+        model: "sonar",
+        messages: [
+            {
+                role: "user",
+                content: prompt,
+            },
+        ],
+        web_search_options: {
+            search_context_size: "medium",
         },
     });
 
-    console.log("Factuality data:", resp.text);
+    // Extract content and citations
+    const result = response.choices[0]?.message.content;
+    // @ts-expect-error - citations is not in the official type definition but exists in the response
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const citations: string[] = response.citations ?? [];
 
-    return resp.text?.replace(/```json/g, "").replace(/```/g, "");
+    // Log the result and citations
+    console.log("Factuality data:", result);
+    console.log("Citations:", citations);
+
+    // Parse the result to add the citations as sources
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const parsedResult = JSON.parse(
+            result?.replace(/```json/g, "").replace(/```/g, "") ?? "{}",
+        );
+
+        // Add the citations as sources to the article factuality data
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        parsedResult.article ??= {};
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        parsedResult.article.sources.push(...citations);
+
+        return JSON.stringify(parsedResult);
+    } catch (error) {
+        console.error("Error parsing factuality data:", error);
+        return result?.replace(/```json/g, "").replace(/```/g, "");
+    }
 }
 
 export async function getPoliticalLeaningData(
@@ -258,17 +293,32 @@ export async function getPoliticalLeaningData(
     Do not even include \`\`\` (code blocks) in your response.
     `;
 
-    const resp = await apiClient.models.generateContent({
-        model: "gemini-2.0-flash-001",
-        contents: prompt,
-        config: {
-            tools: [{ googleSearch: {} }],
+    // Use Perplexity API for political leaning data (requires search capabilities)
+    const response = await perplexityClient.chat.completions.create({
+        model: "sonar",
+        messages: [
+            {
+                role: "user",
+                content: prompt,
+            },
+        ],
+        web_search_options: {
+            search_context_size: "medium",
         },
     });
 
-    console.log("Political leaning data:", resp.text);
+    // Extract content and citations
+    const result = response.choices[0]?.message.content;
+    // @ts-expect-error - citations is not in the official type definition but exists in the response
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const citations: string[] = response.citations ?? [];
 
-    return resp.text?.replace(/```json/g, "").replace(/```/g, "");
+    // Log the result and citations
+    console.log("Political leaning data:", result);
+    console.log("Political leaning citations:", citations);
+
+    // We don't need to add citations to the response format, but we'll log them for reference
+    return result?.replace(/```json/g, "").replace(/```/g, "");
 }
 
 export async function getSourceData(
@@ -299,15 +349,56 @@ export async function getSourceData(
     Do not even include \`\`\` (code blocks) in your response.
     `;
 
-    const resp = await apiClient.models.generateContent({
-        model: "gemini-2.0-flash-001",
-        contents: prompt,
-        config: {
-            tools: [{ googleSearch: {} }],
+    // Use Perplexity API for source data analysis (requires search capabilities)
+    const response = await perplexityClient.chat.completions.create({
+        model: "sonar",
+        messages: [
+            {
+                role: "user",
+                content: prompt,
+            },
+        ],
+        web_search_options: {
+            search_context_size: "medium",
         },
     });
 
-    console.log("Source data:", resp.text);
+    // Extract content and citations
+    const result = response.choices[0]?.message.content;
+    // @ts-expect-error - citations is not in the official type definition but exists in the response
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const citations: string[] = response.citations ?? [];
 
-    return resp.text?.replace(/```json/g, "").replace(/```/g, "");
+    // Log the result and citations
+    console.log("Source data:", result);
+    console.log("Source data citations:", citations);
+
+    // Parse the result and enhance it with citation information
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const parsedResult = JSON.parse(
+            result?.replace(/```json/g, "").replace(/```/g, "") ?? "{}",
+        );
+
+        // Add enhanced reasoning with citations if available
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (citations.length > 0 && parsedResult.reasoning) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            parsedResult.reasoning +=
+                "\n\nBased on information from: " +
+                citations
+                    .map((citation) =>
+                        citation.replace(
+                            /https?:\/\/(?:www\.)?([^\/]+).*/,
+                            "$1",
+                        ),
+                    )
+                    .join(", ");
+        }
+
+        return JSON.stringify(parsedResult);
+    } catch (error) {
+        console.error("Error parsing source data:", error);
+        return result?.replace(/```json/g, "").replace(/```/g, "");
+    }
 }

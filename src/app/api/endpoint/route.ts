@@ -10,10 +10,12 @@ import {
     htmlToMarkdown,
 } from "./prompting";
 
-// Initialize the Gemini API client
+// Initialize the Gemini API client for HTML to Markdown conversion
 const geminiClient = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
+
+// Note: Perplexity API client is initialized in prompting.ts
 
 export async function GET() {
     return NextResponse.json({ message: "News analysis API endpoint" });
@@ -147,7 +149,7 @@ export async function POST(request: Request) {
                 }
             }
 
-            // Get source analysis from AI
+            // Get source analysis from AI using Perplexity (geminiClient is passed for compatibility)
             const sourceDataRaw = await getSourceData(
                 geminiClient,
                 articleContent,
@@ -196,7 +198,7 @@ export async function POST(request: Request) {
             };
             const sentimentData = JSON.parse(sentimentDataRaw) as SentimentData;
 
-            // Get factuality analysis data
+            // Get factuality analysis data using Perplexity (geminiClient is passed for compatibility)
             const factualityDataRaw = await getFactualityData(
                 geminiClient,
                 articleContent,
@@ -222,9 +224,29 @@ export async function POST(request: Request) {
                     ratingLabel: string;
                 };
             };
-            const factualityData = JSON.parse(
-                factualityDataRaw,
-            ) as FactualityData;
+            // Parse factuality data, ensuring we have a valid response
+            let factualityData: FactualityData;
+            try {
+                factualityData = JSON.parse(factualityDataRaw) as FactualityData;
+                
+                // Ensure sources is always an array
+                if (!factualityData.article.sources) {
+                    factualityData.article.sources = [];
+                }
+            } catch (error) {
+                console.error("Error parsing factuality data:", error);
+                factualityData = {
+                    article: {
+                        rating: 0.5,
+                        ratingLabel: "Mixed Factuality",
+                        sources: [],
+                    },
+                    source: {
+                        rating: 0.5,
+                        ratingLabel: "Mixed Factuality",
+                    },
+                };
+            }
 
             // Get political leaning analysis from AI
             let articlePoliticalScore = 50; // Default to center
@@ -235,6 +257,7 @@ export async function POST(request: Request) {
             let sourcePoliticalReasoning = "";
 
             try {
+                // Use the geminiClient parameter for compatibility, but the function will use perplexityClient internally
                 const politicalDataRaw = await getPoliticalLeaningData(
                     geminiClient,
                     articleContent,
