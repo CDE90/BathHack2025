@@ -27,7 +27,7 @@ import {
     Loader2,
     Scale,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ExtendedAnalysisResults extends AnalysisResults {
     article?: {
@@ -35,6 +35,38 @@ interface ExtendedAnalysisResults extends AnalysisResults {
         content: string;
         url?: string;
     };
+}
+
+// Component for realistic progress bar animation
+function AnimatedProgress() {
+    const [progress, setProgress] = useState(15);
+    
+    useEffect(() => {
+        // Initial jumps to simulate fast initial processing
+        const timer1 = setTimeout(() => setProgress(35), 800);
+        const timer2 = setTimeout(() => setProgress(42), 1600);
+        
+        // Slower increments to simulate real processing work
+        const interval = setInterval(() => {
+            setProgress(prev => {
+                // Gradually slow down as we approach higher percentages
+                if (prev < 50) return prev + 3;
+                if (prev < 70) return prev + 2;
+                if (prev < 85) return prev + 0.8;
+                if (prev < 95) return prev + 0.3;
+                // Cap at 95% - the last 5% happens when actual results arrive
+                return 95;
+            });
+        }, 900);
+        
+        return () => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+            clearInterval(interval);
+        };
+    }, []);
+    
+    return <Progress value={progress} className="h-2 w-[250px]" />;
 }
 
 export default function NewsAnalyzer() {
@@ -288,10 +320,7 @@ export default function NewsAnalyzer() {
                                         This may take a few moments
                                     </p>
                                 </div>
-                                <Progress
-                                    value={45}
-                                    className="h-2 w-[250px]"
-                                />
+                                <AnimatedProgress />
                             </div>
                         </CardContent>
                     </Card>
