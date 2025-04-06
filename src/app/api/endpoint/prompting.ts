@@ -87,7 +87,10 @@ export async function htmlToMarkdown(apiClient: GoogleGenAI, html: string) {
 
     console.log("Markdown conversion result length:", resp.text?.length ?? 0);
 
-    return resp.text?.replace(/```md/g, "").replace(/```/g, "");
+    return resp.text
+        ?.replace(/```md/g, "")
+        .replace(/```markdown/g, "")
+        .replace(/```/g, "");
 }
 
 export async function getSentimentData(

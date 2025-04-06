@@ -20,6 +20,7 @@ import {
     CardTitle,
     CardFooter,
 } from "@/components/ui/card";
+import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -114,7 +115,7 @@ export default function NewsAnalyzer() {
                     News Article Analyzer <span className="text-lg font-normal text-muted-foreground">with Source Assessment</span>
                 </h1>
 
-                <div className="flex items-center">
+                <div className="flex items-center gap-3">
                     <span className="text-muted-foreground mr-2 text-sm">
                         Powered by AI
                     </span>
@@ -123,6 +124,7 @@ export default function NewsAnalyzer() {
                             BETA
                         </span>
                     </span>
+                    <ModeToggle />
                 </div>
             </header>
 
@@ -293,7 +295,16 @@ export default function NewsAnalyzer() {
                                                 {/* Article Factuality */}
                                                 <div className="space-y-3">
                                                     <h3 className="text-base font-medium">Article:</h3>
-                                                    <span className="text-lg font-semibold">
+                                                    <span 
+                                                        className={`inline-block rounded-md px-2 py-1 text-base font-medium ${
+                                                            results.factuality.article.rating === "Very Factual" || 
+                                                            results.factuality.article.rating === "Mostly Factual"
+                                                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                                                : results.factuality.article.rating === "Mixed Factuality"
+                                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" 
+                                                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                                        }`}
+                                                    >
                                                         {results.factuality.article.rating}
                                                     </span>
                                                     <div className="space-y-1">
@@ -321,7 +332,16 @@ export default function NewsAnalyzer() {
                                                 {/* Source Factuality */}
                                                 <div className="pt-2 space-y-3 border-t">
                                                     <h3 className="text-base font-medium">Source:</h3>
-                                                    <span className="text-lg font-semibold">
+                                                    <span 
+                                                        className={`inline-block rounded-md px-2 py-1 text-base font-medium ${
+                                                            results.factuality.source.rating === "Very Factual" || 
+                                                            results.factuality.source.rating === "Mostly Factual"
+                                                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                                                : results.factuality.source.rating === "Mixed Factuality"
+                                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" 
+                                                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                                        }`}
+                                                    >
                                                         {results.factuality.source.rating}
                                                     </span>
                                                     <div className="space-y-1">
@@ -468,37 +488,37 @@ export default function NewsAnalyzer() {
                                                             Reliability:
                                                         </span>
                                                         <span
-                                                            className={`flex items-center justify-center gap-1 rounded-sm p-1 text-sm ${
+                                                            className={`flex items-center justify-center gap-1 rounded-md px-2 py-1 text-sm font-medium ${
                                                                 results.source
                                                                     .reliability ===
                                                                 "Very Reliable"
-                                                                    ? "bg-green-500"
+                                                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                                                                     : results
                                                                             .source
                                                                             .reliability ===
                                                                         "Reliable"
-                                                                      ? "bg-green-500"
+                                                                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                                                                       : results
                                                                               .source
                                                                               .reliability ===
                                                                           "Mostly Reliable"
-                                                                        ? "bg-green-500"
+                                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                                                                         : results
                                                                                 .source
                                                                                 .reliability ===
                                                                             "Mixed Reliability"
-                                                                          ? "bg-yellow-500"
+                                                                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
                                                                           : results
                                                                                   .source
                                                                                   .reliability ===
                                                                               "Somewhat Unreliable"
-                                                                            ? "bg-yellow-500"
+                                                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
                                                                             : results
                                                                                     .source
                                                                                     .reliability ===
                                                                                 "Unreliable"
-                                                                              ? "bg-red-500"
-                                                                              : "bg-gray-500"
+                                                                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                                                              : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                                                             }`}
                                                         >
                                                             {
@@ -515,17 +535,17 @@ export default function NewsAnalyzer() {
                                                             Bias:
                                                         </span>
                                                         <span
-                                                            className={`flex items-center justify-center gap-1 rounded-sm p-1 text-sm ${
+                                                            className={`flex items-center justify-center gap-1 rounded-md px-2 py-1 text-sm font-medium ${
                                                                 results.source
                                                                     .bias ===
                                                                 "None"
-                                                                    ? "bg-green-500"
+                                                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
                                                                     : results
                                                                             .source
                                                                             .bias ===
                                                                         "Biased"
-                                                                      ? "bg-red-500"
-                                                                      : "bg-gray-500"
+                                                                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+                                                                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                                                             }`}
                                                         >
                                                             {
@@ -558,13 +578,13 @@ export default function NewsAnalyzer() {
                                                                 results.source
                                                                     .credibility >
                                                                 0.5
-                                                                    ? "bg-green-500"
+                                                                    ? "bg-green-400 dark:bg-green-600"
                                                                     : results
                                                                             .source
                                                                             .credibility >
                                                                         0.25
-                                                                      ? "bg-yellow-500"
-                                                                      : "bg-red-500"
+                                                                      ? "bg-amber-400 dark:bg-amber-600"
+                                                                      : "bg-red-400 dark:bg-red-600"
                                                             }`}
                                                             style={{
                                                                 width: "20%", // Constant width of 0.2 units
@@ -600,25 +620,38 @@ export default function NewsAnalyzer() {
                                             {/* Article Political Leaning */}
                                             <div className="space-y-4">
                                                 <h3 className="text-base font-medium">Article:</h3>
-                                                <div className="text-xl font-semibold">
-                                                    {results.politicalLeaning.article
-                                                        .category ??
-                                                        (results.politicalLeaning.article
-                                                            .score < 21
-                                                            ? "Far Left"
-                                                            : results
-                                                                    .politicalLeaning.article
-                                                                    .score < 41
-                                                              ? "Center-Left"
-                                                              : results
-                                                                      .politicalLeaning.article
-                                                                      .score < 61
-                                                                ? "Centrist"
-                                                                : results
-                                                                        .politicalLeaning.article
-                                                                        .score < 81
-                                                                  ? "Center-Right"
-                                                                  : "Far Right")}
+                                                <div>
+                                                    {(() => {
+                                                        const category = results.politicalLeaning.article.category ??
+                                                            (results.politicalLeaning.article.score < 21
+                                                                ? "Far Left"
+                                                                : results.politicalLeaning.article.score < 41
+                                                                    ? "Center-Left"
+                                                                    : results.politicalLeaning.article.score < 61
+                                                                        ? "Centrist"
+                                                                        : results.politicalLeaning.article.score < 81
+                                                                            ? "Center-Right"
+                                                                            : "Far Right");
+                                                        
+                                                        let bgClass = "";
+                                                        if (category === "Far Left") {
+                                                            bgClass = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300";
+                                                        } else if (category === "Center-Left") {
+                                                            bgClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+                                                        } else if (category === "Centrist") {
+                                                            bgClass = "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+                                                        } else if (category === "Center-Right") {
+                                                            bgClass = "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+                                                        } else if (category === "Far Right") {
+                                                            bgClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+                                                        }
+                                                        
+                                                        return (
+                                                            <span className={`inline-block rounded-md px-3 py-1 text-base font-medium ${bgClass}`}>
+                                                                {category}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 <div className="space-y-1">
                                                     <div className="text-muted-foreground flex justify-between text-xs">
@@ -657,25 +690,38 @@ export default function NewsAnalyzer() {
                                             {/* Source Political Leaning */}
                                             <div className="pt-4 border-t space-y-4">
                                                 <h3 className="text-base font-medium">Source:</h3>
-                                                <div className="text-xl font-semibold">
-                                                    {results.politicalLeaning.source
-                                                        .category ??
-                                                        (results.politicalLeaning.source
-                                                            .score < 21
-                                                            ? "Far Left"
-                                                            : results
-                                                                    .politicalLeaning.source
-                                                                    .score < 41
-                                                              ? "Center-Left"
-                                                              : results
-                                                                      .politicalLeaning.source
-                                                                      .score < 61
-                                                                ? "Centrist"
-                                                                : results
-                                                                        .politicalLeaning.source
-                                                                        .score < 81
-                                                                  ? "Center-Right"
-                                                                  : "Far Right")}
+                                                <div>
+                                                    {(() => {
+                                                        const category = results.politicalLeaning.source.category ??
+                                                            (results.politicalLeaning.source.score < 21
+                                                                ? "Far Left"
+                                                                : results.politicalLeaning.source.score < 41
+                                                                    ? "Center-Left"
+                                                                    : results.politicalLeaning.source.score < 61
+                                                                        ? "Centrist"
+                                                                        : results.politicalLeaning.source.score < 81
+                                                                            ? "Center-Right"
+                                                                            : "Far Right");
+                                                        
+                                                        let bgClass = "";
+                                                        if (category === "Far Left") {
+                                                            bgClass = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300";
+                                                        } else if (category === "Center-Left") {
+                                                            bgClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+                                                        } else if (category === "Centrist") {
+                                                            bgClass = "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+                                                        } else if (category === "Center-Right") {
+                                                            bgClass = "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+                                                        } else if (category === "Far Right") {
+                                                            bgClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+                                                        }
+                                                        
+                                                        return (
+                                                            <span className={`inline-block rounded-md px-3 py-1 text-base font-medium ${bgClass}`}>
+                                                                {category}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 <div className="space-y-1">
                                                     <div className="text-muted-foreground flex justify-between text-xs">
@@ -732,16 +778,20 @@ export default function NewsAnalyzer() {
                                                     Overall Sentiment
                                                 </h3>
                                                 <div className="mb-1.5 flex items-center justify-between">
-                                                    <span className="text-base">
-                                                        {results.sentiment
-                                                            .overall.score > 0.2
+                                                    <span 
+                                                        className={`inline-block rounded-md px-2 py-1 text-sm font-medium ${
+                                                            results.sentiment.overall.score > 0.2
+                                                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                                                : results.sentiment.overall.score < -0.2
+                                                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                                                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                                                        }`}
+                                                    >
+                                                        {results.sentiment.overall.score > 0.2
                                                             ? "Positive"
-                                                            : results.sentiment
-                                                                    .overall
-                                                                    .score <
-                                                                -0.2
-                                                              ? "Negative"
-                                                              : "Neutral"}
+                                                            : results.sentiment.overall.score < -0.2
+                                                                ? "Negative"
+                                                                : "Neutral"}
                                                     </span>
                                                     <span className="text-muted-foreground text-sm">
                                                         Score:{" "}
@@ -760,14 +810,14 @@ export default function NewsAnalyzer() {
                                                             results.sentiment
                                                                 .overall.score >
                                                             0.2
-                                                                ? "bg-green-500"
+                                                                ? "bg-green-400 dark:bg-green-600"
                                                                 : results
                                                                         .sentiment
                                                                         .overall
                                                                         .score <
                                                                     -0.2
-                                                                  ? "bg-red-500"
-                                                                  : "bg-gray-500"
+                                                                  ? "bg-red-400 dark:bg-red-600"
+                                                                  : "bg-gray-400 dark:bg-gray-600"
                                                         }`}
                                                         style={{
                                                             width: "20%", // Constant width of 0.2 units
